@@ -237,9 +237,11 @@ class HomePage {
     _updateClock() {
         const now = new Date();
 
-        const hours   = now.getHours().toString().padStart(2, '0');
-        const minutes = now.getMinutes().toString().padStart(2, '0');
-        this._els.time.textContent = `${hours}:${minutes}`;
+        this._els.time.textContent = now.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+        });
 
         const options = { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' };
         this._els.date.textContent = now.toLocaleDateString('en-US', options);
