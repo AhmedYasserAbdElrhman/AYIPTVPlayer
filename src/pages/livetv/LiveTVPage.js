@@ -3,6 +3,7 @@ import { mapRemoteEvent } from '../../input/RemoteKeyMapper.js';
 import { RemoteActions } from '../../input/RemoteActions.js';
 import LiveService from '../../api/LiveService.js';
 import VideoPlayer from '../../components/VideoPlayer/VideoPlayer.js';
+import { EVENTS } from '../../config/AppConstants.js';
 
 /**
  * LiveTV page controller — Smart TV remote optimised.
@@ -132,6 +133,15 @@ class LiveTVPage {
 
         this._els.playerContainer.addEventListener('player:error', () => {
             this._stopPlayback();
+        });
+
+        // Handle back button when player is fullscreen
+        this._container.addEventListener(EVENTS.PLAYER_MINIMIZE_REQUEST, () => {
+            console.log('[LiveTVPage] Minimize request received');
+            if (this._player.isFullscreen()) {
+                this._player.enterMini();
+                this._installKeyHandler();
+            }
         });
     }
 
@@ -566,9 +576,8 @@ class LiveTVPage {
     // ─── Navigation Events ───────────────────────────────────
 
     _goBack() {
-        this._container.dispatchEvent(
-            new CustomEvent('page:back', { bubbles: true })
-        );
+        // WebOS handles back through History API
+        window.history.back();
     }
 }
 
