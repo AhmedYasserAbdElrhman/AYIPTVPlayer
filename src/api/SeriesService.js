@@ -1,6 +1,7 @@
 import client from './XtreamClient.js';
 import { Endpoint, Router, StreamType } from './Router.js';
 import Cache from '../utils/cache.js';
+import { fetchWithCache } from '../utils/cacheHelpers.js';
 import Settings from '../config/settings.js';
 
 /**
@@ -18,17 +19,13 @@ class SeriesService {
      */
     async getCategories(forceRefresh = false) {
         const cacheKey = 'series_categories';
-        if (!forceRefresh && this._cache.has(cacheKey)) {
-            return this._cache.get(cacheKey);
-        }
 
-        const data = await client.execute(Endpoint.seriesCategories(), {
-            requestId: 'series_categories',
-        });
-
-        const categories = Array.isArray(data) ? data : [];
-        this._cache.set(cacheKey, categories);
-        return categories;
+        return fetchWithCache(this._cache, cacheKey, async () => {
+            const data = await client.execute(Endpoint.seriesCategories(), {
+                requestId: 'series_categories',
+            });
+            return Array.isArray(data) ? data : [];
+        }, { forceRefresh });
     }
 
     /**
@@ -42,17 +39,12 @@ class SeriesService {
             ? `series_cat_${categoryId}`
             : 'series_all';
 
-        if (!forceRefresh && this._cache.has(cacheKey)) {
-            return this._cache.get(cacheKey);
-        }
-
-        const data = await client.execute(Endpoint.series(categoryId), {
-            requestId: `series_${categoryId || 'all'}`,
-        });
-
-        const series = Array.isArray(data) ? data : [];
-        this._cache.set(cacheKey, series);
-        return series;
+        return fetchWithCache(this._cache, cacheKey, async () => {
+            const data = await client.execute(Endpoint.series(categoryId), {
+                requestId: `series_${categoryId || 'all'}`,
+            });
+            return Array.isArray(data) ? data : [];
+        }, { forceRefresh });
     }
 
     /**
@@ -63,19 +55,13 @@ class SeriesService {
      */
     async getInfo(seriesId, forceRefresh = false) {
         const cacheKey = `series_info_${seriesId}`;
-        if (!forceRefresh && this._cache.has(cacheKey)) {
-            return this._cache.get(cacheKey);
-        }
 
-        const data = await client.execute(Endpoint.seriesInfo(seriesId), {
-            requestId: `series_info_${seriesId}`,
-        });
-
-        if (data) {
-            this._cache.set(cacheKey, data);
-        }
-
-        return data || {};
+        return fetchWithCache(this._cache, cacheKey, async () => {
+            const data = await client.execute(Endpoint.seriesInfo(seriesId), {
+                requestId: `series_info_${seriesId}`,
+            });
+            return data || {};
+        }, { forceRefresh });
     }
 
     /**
