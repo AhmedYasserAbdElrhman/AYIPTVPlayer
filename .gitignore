@@ -1,0 +1,28 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Vite build output
+dist/
+output/
+
+# WebOS TV App Packages
+*.ipk
+
+# OS junk/temp files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# VSCode / JetBrains / Editor folders
+.vscode/
+.idea/
+*.swp
+
+# Mac .AppleDouble resource files
+.AppleDouble/
+
+# Local env files
+.env
