@@ -1,0 +1,196 @@
+<div class="home-page">
+
+    <!-- Background — static gradients, no blur -->
+    <div class="home-bg">
+        <div class="home-bg__orb home-bg__orb--1"></div>
+        <div class="home-bg__orb home-bg__orb--2"></div>
+        <div class="home-bg__orb home-bg__orb--3"></div>
+        <div class="home-bg__grid"></div>
+    </div>
+
+    <!-- Main Layout -->
+    <div class="home-layout">
+
+        <!-- Top Bar — brand + clock -->
+        <div class="home-topbar">
+            <div class="home-topbar__left">
+                <div class="home-topbar__brand">
+                    <div class="home-topbar__icon">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M21 6h-7.59l3.29-3.29L16 2l-4 4-4-4-.71.71L10.59 6H3c-1.1
+                            0-2 .89-2 2v12c0 1.1.9 2 2 2h18c1.1 0 2-.9
+                            2-2V8c0-1.11-.9-2-2-2zm0 14H3V8h18v12zM9 10v8l7-4z"/>
+                        </svg>
+                    </div>
+                    <span class="home-topbar__title">IPTV Player</span>
+                </div>
+            </div>
+            <div class="home-topbar__right">
+                <div class="home-topbar__clock">
+                    <span class="home-topbar__time" id="topbar-time">--:--</span>
+                    <span class="home-topbar__date" id="topbar-date">---</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="home-content">
+
+            <!-- Category Cards -->
+            <div class="home-categories">
+                <button class="category-card focusable" id="card-livetv"
+                        data-focus-index="0" data-focus-row="0">
+                    <div class="category-card__icon-wrap category-card__icon-wrap--live">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="2" y="7" width="20" height="15" rx="2" ry="2"/>
+                            <polyline points="17 2 12 7 7 2"/>
+                        </svg>
+                    </div>
+                    <div class="category-card__body">
+                        <span class="category-card__title">Live TV</span>
+                        <span class="category-card__sub" id="card-livetv-count">0 channels</span>
+                    </div>
+                    <div class="category-card__arrow">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="9 18 15 12 9 6"/>
+                        </svg>
+                    </div>
+                </button>
+
+                <button class="category-card focusable" id="card-movies"
+                        data-focus-index="1" data-focus-row="0">
+                    <div class="category-card__icon-wrap category-card__icon-wrap--movies">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/>
+                            <line x1="7" y1="2" x2="7" y2="22"/>
+                            <line x1="17" y1="2" x2="17" y2="22"/>
+                            <line x1="2" y1="12" x2="22" y2="12"/>
+                            <line x1="2" y1="7" x2="7" y2="7"/>
+                            <line x1="2" y1="17" x2="7" y2="17"/>
+                            <line x1="17" y1="17" x2="22" y2="17"/>
+                            <line x1="17" y1="7" x2="22" y2="7"/>
+                        </svg>
+                    </div>
+                    <div class="category-card__body">
+                        <span class="category-card__title">Movies</span>
+                        <span class="category-card__sub" id="card-movies-count">0 movies</span>
+                    </div>
+                    <div class="category-card__arrow">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="9 18 15 12 9 6"/>
+                        </svg>
+                    </div>
+                </button>
+
+                <button class="category-card focusable" id="card-series"
+                        data-focus-index="2" data-focus-row="0">
+                    <div class="category-card__icon-wrap category-card__icon-wrap--series">
+                        <!-- Stacked episodes icon -->
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="4" y="8" width="16" height="12" rx="2"/>
+                            <rect x="6" y="5" width="12" height="3" rx="1" opacity="0.6"/>
+                            <rect x="8" y="2" width="8" height="3" rx="1" opacity="0.3"/>
+                            <polygon points="10 12 10 18 15 15" fill="currentColor" stroke="none"/>
+                        </svg>
+                    </div>
+                    <div class="category-card__body">
+                        <span class="category-card__title">Series</span>
+                        <span class="category-card__sub" id="card-series-count">0 series</span>
+                    </div>
+                    <div class="category-card__arrow">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="9 18 15 12 9 6"/>
+                        </svg>
+                    </div>
+                </button>
+            </div>
+
+            <!-- Recent / Favourites Section -->
+            <div class="home-recent">
+                <div class="home-recent__header">
+                    <h2 class="home-recent__title" id="recent-title">Latest Watched</h2>
+                    <div class="home-recent__toggle-wrap">
+                        <span class="home-recent__toggle-label">Favourites</span>
+                        <div class="toggle focusable" id="toggle-fav"
+                             data-focus-index="3" data-focus-row="1"
+                             role="switch" aria-checked="false">
+                            <div class="toggle__knob"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="home-recent__list" id="recent-list">
+                    <div class="home-recent__empty" id="recent-empty">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"/>
+                            <polyline points="12 6 12 12 16 14"/>
+                        </svg>
+                        <span>No recent items yet</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Bottom Bar — settings, logout, expiration -->
+        <div class="home-bottom">
+            <div class="home-bottom__left">
+                <button class="action-btn focusable" id="btn-settings"
+                        data-focus-index="4" data-focus-row="2">
+                    <svg class="action-btn__icon" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0
+                        0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0
+                        0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2
+                        2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65
+                        1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2
+                        0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65
+                        1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1
+                        2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0
+                        0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1
+                        2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0
+                        0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2
+                        2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0
+                        1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0
+                        2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65
+                        0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65
+                        1.65 0 0 0-1.51 1z"/>
+                    </svg>
+                    <span class="action-btn__text">Settings</span>
+                </button>
+                <button class="action-btn action-btn--danger focusable" id="btn-logout"
+                        data-focus-index="5" data-focus-row="2">
+                    <svg class="action-btn__icon" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                        <polyline points="16 17 21 12 16 7"/>
+                        <line x1="21" y1="12" x2="9" y2="12"/>
+                    </svg>
+                    <span class="action-btn__text">Logout</span>
+                </button>
+            </div>
+
+            <!-- Expiration full text -->
+            <div class="home-bottom__exp" id="bottom-exp">
+                <svg class="home-bottom__exp-icon" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <polyline points="12 6 12 12 16 14"/>
+                </svg>
+                <span class="home-bottom__exp-date" id="bottom-exp-date">----</span>
+                <span class="home-bottom__exp-days" id="bottom-exp-days">(-- days left)</span>
+            </div>
+        </div>
+
+    </div>
+</div>

@@ -1,0 +1,574 @@
+/* ─── Home Page Layout — fixed 1920×1080 for TV ─────────────── */
+
+.home-page {
+    width: 1920px;
+    height: 1080px;
+    display: flex;
+    position: relative;
+    overflow: hidden;
+    background: #0b0b12;
+}
+
+/* ─── Background — TV-optimised (no blur, no backdrop-filter) ─ */
+
+.home-bg {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+}
+
+.home-bg__orb {
+    position: absolute;
+    border-radius: 50%;
+}
+
+.home-bg__orb--1 {
+    width: 900px;
+    height: 900px;
+    background: radial-gradient(circle, rgba(108, 92, 231, 0.14) 0%, transparent 70%);
+    top: -350px;
+    right: -200px;
+}
+
+.home-bg__orb--2 {
+    width: 700px;
+    height: 700px;
+    background: radial-gradient(circle, rgba(168, 85, 247, 0.10) 0%, transparent 70%);
+    bottom: -300px;
+    left: -200px;
+}
+
+.home-bg__orb--3 {
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.08) 0%, transparent 70%);
+    top: 50%;
+    left: 35%;
+}
+
+.home-bg__grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+    background-size: 80px 80px;
+}
+
+/* ─── Main Layout ───────────────────────────────────────────── */
+
+.home-layout {
+    position: relative;
+    z-index: 1;
+    width: 1920px;
+    height: 1080px;
+    display: flex;
+    flex-direction: column;
+    padding: 44px 72px 40px;
+    opacity: 0;
+    animation: homeIn 350ms 80ms ease-out forwards;
+}
+
+@keyframes homeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+/* ─── Top Bar ───────────────────────────────────────────────── */
+
+.home-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    margin-bottom: 40px;
+}
+
+.home-topbar__left {
+    display: flex;
+    align-items: center;
+}
+
+.home-topbar__brand {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.home-topbar__icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #6c5ce7, #a855f7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 20px rgba(108, 92, 231, 0.35);
+}
+
+.home-topbar__icon svg {
+    width: 32px;
+    height: 32px;
+    fill: white;
+}
+
+.home-topbar__title {
+    font-size: 36px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    background: linear-gradient(135deg, #6c5ce7, #a855f7);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.home-topbar__right {
+    display: flex;
+    align-items: center;
+}
+
+.home-topbar__clock {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+}
+
+.home-topbar__time {
+    font-size: 42px;
+    font-weight: 600;
+    color: #e8e8f0;
+    letter-spacing: 1.5px;
+    line-height: 1;
+}
+
+.home-topbar__date {
+    font-size: 22px;
+    color: #6b6b80;
+}
+
+/* ─── Main Content ──────────────────────────────────────────── */
+
+.home-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 36px;
+    min-height: 0;
+}
+
+/* ─── Category Cards — border-only focus (TV perf) ──────────── */
+
+.home-categories {
+    display: flex;
+    gap: 24px;
+    flex-shrink: 0;
+}
+
+.category-card {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    padding: 40px 36px;
+    background: #12121a;
+    border: 3px solid rgba(255, 255, 255, 0.04);
+    border-radius: 20px;
+    cursor: pointer;
+    font-family: inherit;
+    text-align: left;
+    color: inherit;
+    will-change: border-color;
+    transition: border-color 80ms ease;
+}
+
+.category-card.focused {
+    border-color: #6c5ce7;
+}
+
+.category-card__icon-wrap {
+    width: 88px;
+    height: 88px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.category-card__icon-wrap svg {
+    width: 44px;
+    height: 44px;
+}
+
+.category-card__icon-wrap--live {
+    background: rgba(108, 92, 231, 0.12);
+    color: #6c5ce7;
+}
+
+.category-card__icon-wrap--movies {
+    background: rgba(168, 85, 247, 0.12);
+    color: #a855f7;
+}
+
+.category-card__icon-wrap--series {
+    background: rgba(59, 130, 246, 0.12);
+    color: #3b82f6;
+}
+
+.category-card.focused .category-card__icon-wrap--live {
+    background: rgba(108, 92, 231, 0.25);
+}
+
+.category-card.focused .category-card__icon-wrap--movies {
+    background: rgba(168, 85, 247, 0.25);
+}
+
+.category-card.focused .category-card__icon-wrap--series {
+    background: rgba(59, 130, 246, 0.25);
+}
+
+.category-card__body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.category-card__title {
+    font-size: 32px;
+    font-weight: 700;
+    color: #e8e8f0;
+    letter-spacing: -0.3px;
+}
+
+.category-card__sub {
+    font-size: 22px;
+    color: #6b6b80;
+}
+
+.category-card__arrow {
+    width: 36px;
+    height: 36px;
+    color: #3e3e52;
+    flex-shrink: 0;
+    transition: color 80ms ease;
+}
+
+.category-card__arrow svg {
+    width: 36px;
+    height: 36px;
+}
+
+.category-card.focused .category-card__arrow {
+    color: #6c5ce7;
+}
+
+/* ─── Recent / Favourites Section ───────────────────────────── */
+
+.home-recent {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.home-recent__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    flex-shrink: 0;
+}
+
+.home-recent__title {
+    font-size: 28px;
+    font-weight: 600;
+    color: #e8e8f0;
+    letter-spacing: -0.2px;
+}
+
+.home-recent__toggle-wrap {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.home-recent__toggle-label {
+    font-size: 22px;
+    color: #6b6b80;
+}
+
+/* ─── Toggle — TV-sized ─────────────────────────────────────── */
+
+.toggle {
+    position: relative;
+    width: 72px;
+    height: 40px;
+    border-radius: 999px;
+    background: #2a2a3a;
+    border: 3px solid transparent;
+    cursor: pointer;
+    will-change: border-color;
+    transition: background-color 80ms ease, border-color 80ms ease;
+}
+
+.toggle.focused {
+    border-color: #6c5ce7;
+}
+
+.toggle__knob {
+    position: absolute;
+    top: 4px;
+    left: 5px;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: #6b6b80;
+    transition: transform 80ms ease, background-color 80ms ease;
+}
+
+.toggle--active {
+    background: #6c5ce7;
+}
+
+.toggle--active .toggle__knob {
+    transform: translateX(30px);
+    background: white;
+}
+
+/* ─── Recent List — horizontal scroll ───────────────────────── */
+
+.home-recent__list {
+    display: flex;
+    gap: 20px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    flex: 1;
+    align-items: flex-start;
+    padding-bottom: 8px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.home-recent__list::-webkit-scrollbar {
+    display: none;
+}
+
+.home-recent__empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    width: 100%;
+    height: 100%;
+    min-height: 180px;
+    color: #3e3e52;
+    font-size: 24px;
+}
+
+.home-recent__empty svg {
+    width: 56px;
+    height: 56px;
+}
+
+/* ─── Recent Card — border-only focus (TV perf) ─────────────── */
+
+.recent-card {
+    flex-shrink: 0;
+    width: 260px;
+    background: #12121a;
+    border: 3px solid rgba(255, 255, 255, 0.04);
+    border-radius: 18px;
+    overflow: hidden;
+    cursor: pointer;
+    font-family: inherit;
+    color: inherit;
+    text-align: left;
+    will-change: border-color;
+    transition: border-color 80ms ease;
+}
+
+.recent-card.focused {
+    border-color: #6c5ce7;
+}
+
+.recent-card__thumb {
+    width: 100%;
+    height: 150px;
+    background: #1a1a26;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.recent-card__thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.recent-card__thumb-placeholder {
+    color: #2a2a3a;
+}
+
+.recent-card__thumb-placeholder svg {
+    width: 48px;
+    height: 48px;
+}
+
+.recent-card__type-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    padding: 4px 12px;
+    font-size: 16px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    border-radius: 8px;
+    color: white;
+}
+
+.recent-card__type-badge--live   { background: rgba(108, 92, 231, 0.85); }
+.recent-card__type-badge--movie  { background: rgba(168, 85, 247, 0.85); }
+.recent-card__type-badge--series { background: rgba(59, 130, 246, 0.85); }
+
+.recent-card__info {
+    padding: 16px 18px 20px;
+}
+
+.recent-card__name {
+    font-size: 22px;
+    font-weight: 600;
+    color: #e8e8f0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+}
+
+.recent-card__meta {
+    font-size: 17px;
+    color: #6b6b80;
+    margin-top: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+}
+
+.recent-card__progress {
+    height: 4px;
+    background: #2a2a3a;
+}
+
+.recent-card__progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #6c5ce7, #a855f7);
+    border-radius: 0 2px 2px 0;
+}
+
+.recent-card__fav {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 30px;
+    height: 30px;
+    color: #ff4466;
+    display: none;
+}
+
+.recent-card__fav svg {
+    width: 30px;
+    height: 30px;
+    fill: #ff4466;
+    stroke: none;
+}
+
+.recent-card--fav .recent-card__fav {
+    display: block;
+}
+
+/* ─── Bottom Bar ────────────────────────────────────────────── */
+
+.home-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    padding-top: 24px;
+}
+
+.home-bottom__left {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.action-btn {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 18px 36px;
+    font-family: inherit;
+    font-size: 22px;
+    font-weight: 600;
+    color: #8b8ba0;
+    background: #12121a;
+    border: 3px solid rgba(255, 255, 255, 0.04);
+    border-radius: 16px;
+    cursor: pointer;
+    will-change: border-color;
+    transition: border-color 80ms ease, color 80ms ease;
+}
+
+.action-btn__icon {
+    width: 28px;
+    height: 28px;
+}
+
+.action-btn.focused {
+    border-color: #6c5ce7;
+    color: #e8e8f0;
+}
+
+.action-btn--danger.focused {
+    border-color: #ff4466;
+    color: #ff4466;
+}
+
+/* ─── Expiration — full text ────────────────────────────────── */
+
+.home-bottom__exp {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.home-bottom__exp-icon {
+    width: 24px;
+    height: 24px;
+    color: #6c5ce7;
+    flex-shrink: 0;
+}
+
+.home-bottom__exp-date {
+    font-size: 22px;
+    font-weight: 500;
+    color: #6b6b80;
+}
+
+.home-bottom__exp-days {
+    font-size: 22px;
+    font-weight: 600;
+    color: #8b8ba0;
+}
+
+.home-bottom__exp--warning .home-bottom__exp-days { color: #ffaa44; }
+.home-bottom__exp--warning .home-bottom__exp-icon { color: #ffaa44; }
+.home-bottom__exp--critical .home-bottom__exp-days { color: #ff4466; }
+.home-bottom__exp--critical .home-bottom__exp-icon { color: #ff4466; }
