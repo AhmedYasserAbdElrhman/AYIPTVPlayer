@@ -1,0 +1,17 @@
+{
+    "id": "com.ay.iptv",
+    "version": "1.0.0",
+    "vendor": "AY",
+    "type": "web",
+    "main": "index.html",
+    "title": "IPTV Player",
+    "icon": "icon.png",
+    "largeIcon": "largeIcon.png",
+    "iconColor": "#6c5ce7",
+    "bgColor": "#0a0a0f",
+    "resolution": "1920x1080",
+    "disableBackHistoryAPI": false,
+    "handlesRelaunch": false,
+    "allowAudioCapture": false,
+    "allowVideoCapture": false
+}

@@ -1,0 +1,180 @@
+/* ─── Reset & Base ──────────────────────────────────────────── */
+
+*, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    /* Colors */
+    --bg-primary: #0a0a0f;
+    --bg-secondary: #12121a;
+    --bg-card: #1a1a28;
+    --bg-input: #1e1e30;
+    --bg-input-focus: #252540;
+
+    --text-primary: #ffffff;
+    --text-secondary: #8888aa;
+    --text-placeholder: #555570;
+    --text-error: #ff4466;
+    --text-success: #44ffaa;
+
+    --accent: #6c5ce7;
+    --accent-hover: #7c6ef7;
+    --accent-glow: rgba(108, 92, 231, 0.4);
+    --accent-gradient: linear-gradient(135deg, #6c5ce7 0%, #a855f7 100%);
+
+    --border: #2a2a40;
+    --border-focus: #6c5ce7;
+    --border-error: #ff4466;
+
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 8px 32px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.5);
+    --shadow-glow: 0 0 30px var(--accent-glow);
+
+    /* Typography */
+    --font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-size-xs: 12px;
+    --font-size-sm: 14px;
+    --font-size-md: 16px;
+    --font-size-lg: 20px;
+    --font-size-xl: 28px;
+    --font-size-2xl: 36px;
+    --font-size-3xl: 48px;
+
+    /* Spacing */
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 16px;
+    --spacing-lg: 24px;
+    --spacing-xl: 32px;
+    --spacing-2xl: 48px;
+    --spacing-3xl: 64px;
+
+    /* Borders */
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 24px;
+    --radius-full: 9999px;
+
+    /* Transitions */
+    --transition-fast: 150ms ease;
+    --transition-normal: 250ms ease;
+    --transition-slow: 400ms cubic-bezier(0.16, 1, 0.3, 1);
+
+    /* TV Safe Area */
+    --safe-area-x: 60px;
+    --safe-area-y: 30px;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    font-family: var(--font-family);
+    font-size: var(--font-size-md);
+    color: var(--text-primary);
+    background-color: var(--bg-primary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+#app {
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+/* ─── Focus System (TV Remote Navigation) ───────────────────── */
+
+.focusable {
+    outline: none;
+    transition:
+        border-color var(--transition-normal),
+        box-shadow var(--transition-normal),
+        transform var(--transition-slow),
+        background-color var(--transition-normal);
+}
+
+.focusable.focused {
+    border-color: var(--border-focus);
+    box-shadow: var(--shadow-glow);
+    transform: scale(1.02);
+}
+
+/* ─── Scrollbar (hidden for TV) ─────────────────────────────── */
+
+::-webkit-scrollbar {
+    display: none;
+}
+
+/* ─── Keyframes ─────────────────────────────────────────────── */
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.5; }
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}
+
+@keyframes shimmer {
+    0%   { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+@keyframes glowPulse {
+    0%, 100% { box-shadow: 0 0 20px var(--accent-glow); }
+    50%      { box-shadow: 0 0 40px var(--accent-glow), 0 0 60px rgba(108, 92, 231, 0.2); }
+}
+
+/* ─── Utility Classes ───────────────────────────────────────── */
+
+.hidden { display: none !important; }
+.fade-in { animation: fadeIn var(--transition-slow) forwards; }
+.fade-in-up { animation: fadeInUp 500ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.fade-in-down { animation: fadeInDown 400ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.scale-in { animation: scaleIn 400ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
