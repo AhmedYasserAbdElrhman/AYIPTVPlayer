@@ -1,6 +1,8 @@
 import Settings from '../../config/settings.js';
 import XtreamAuth from '../../api/XtreamAuth.js';
 import TemplateEngine from '../../utils/templateEngine.js';
+import { validateLogin } from './LoginValidator.js';
+import { getAuthErrorMessage } from './AuthErrorMapper.js';
 
 /**
  * Login page controller — Smart TV remote optimised.
@@ -262,24 +264,32 @@ class LoginPage {
     // ─── Validation ────────────────────────────────────────────
 
     _validate() {
-        let isValid = true;
+        const values = {
+            host: this._els.host.value,
+            port: this._els.port.value,
+            username: this._els.username.value,
+            password: this._els.password.value,
+        };
+
+        const { isValid, errors } = validateLogin(values);
 
         const fields = [
-            { el: this._els.host,     group: this._els.groups.host },
-            { el: this._els.port,     group: this._els.groups.port },
-            { el: this._els.username, group: this._els.groups.username },
-            { el: this._els.password, group: this._els.groups.password },
+            { key: 'host',     el: this._els.host,     group: this._els.groups.host },
+            { key: 'port',     el: this._els.port,     group: this._els.groups.port },
+            { key: 'username', el: this._els.username, group: this._els.groups.username },
+            { key: 'password', el: this._els.password, group: this._els.groups.password },
         ];
 
-        fields.forEach(({ el, group }) => {
-            const empty = !el.value.trim();
-            group.classList.toggle('input-group--error', empty);
-            if (empty) isValid = false;
+        fields.forEach(({ key, group }) => {
+            const hasError = Boolean(errors[key]);
+            group.classList.toggle('input-group--error', hasError);
         });
 
         if (!isValid) {
-            const first = fields.findIndex(({ el }) => !el.value.trim());
-            if (first !== -1) this._setFocus(first);
+            const firstErrorIndex = fields.findIndex(({ key }) => errors[key]);
+            if (firstErrorIndex !== -1) {
+                this._setFocus(firstErrorIndex);
+            }
         }
 
         return isValid;
@@ -334,16 +344,7 @@ class LoginPage {
     }
 
     _getErrorMessage(error) {
-        const msg = error.message || '';
-        if (msg.includes('timed out') || msg.includes('abort'))
-            return 'Connection timed out. Check the server address and port.';
-        if (msg.includes('Authentication failed') || msg.includes('invalid credentials'))
-            return 'Invalid username or password.';
-        if (msg.includes('fetch') || msg.includes('network') || msg.includes('Failed'))
-            return 'Cannot reach server. Check your connection.';
-        if (msg.includes('Invalid server response'))
-            return 'Server returned an unexpected response.';
-        return `Connection failed: ${msg}`;
+        return getAuthErrorMessage(error);
     }
 
     // ─── Saved Credentials ─────────────────────────────────────
