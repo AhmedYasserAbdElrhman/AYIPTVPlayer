@@ -1,6 +1,7 @@
 import client from './XtreamClient.js';
 import { Endpoint, Router, StreamType } from './Router.js';
 import Cache from '../utils/cache.js';
+import { fetchWithCache } from '../utils/cacheHelpers.js';
 import Settings from '../config/settings.js';
 
 /**
@@ -19,17 +20,13 @@ class LiveService {
      */
     async getCategories(forceRefresh = false) {
         const cacheKey = 'live_categories';
-        if (!forceRefresh && this._cache.has(cacheKey)) {
-            return this._cache.get(cacheKey);
-        }
 
-        const data = await client.execute(Endpoint.liveCategories(), {
-            requestId: 'live_categories',
-        });
-
-        const categories = Array.isArray(data) ? data : [];
-        this._cache.set(cacheKey, categories);
-        return categories;
+        return fetchWithCache(this._cache, cacheKey, async () => {
+            const data = await client.execute(Endpoint.liveCategories(), {
+                requestId: 'live_categories',
+            });
+            return Array.isArray(data) ? data : [];
+        }, { forceRefresh });
     }
 
     /**
@@ -43,41 +40,12 @@ class LiveService {
             ? `live_streams_cat_${categoryId}`
             : 'live_streams_all';
 
-        if (!forceRefresh && this._cache.has(cacheKey)) {
-            return this._cache.get(cacheKey);
-        }
-
-        const data = await client.execute(Endpoint.liveStreams(categoryId), {
-            requestId: `live_streams_${categoryId || 'all'}`,
-        });
-
-        const streams = Array.isArray(data) ? data : [];
-        this._cache.set(cacheKey, streams);
-        return streams;
-    }
-
-    /**
-     * Fetches short EPG for a live stream.
-     * @param {number|string} streamId
-     * @param {number} [limit]
-     * @param {boolean} [forceRefresh=false]
-     * @returns {Promise<Object>}
-     */
-    async getShortEpg(streamId, limit = null, forceRefresh = false) {
-        const cacheKey = `epg_short_${streamId}_${limit || 'all'}`;
-        if (!forceRefresh && this._cache.has(cacheKey)) {
-            return this._cache.get(cacheKey);
-        }
-
-        const data = await client.execute(Endpoint.shortEpg(streamId, limit), {
-            requestId: `epg_short_${streamId}`,
-        });
-
-        if (data) {
-            this._cache.set(cacheKey, data);
-        }
-
-        return data || {};
+        return fetchWithCache(this._cache, cacheKey, async () => {
+            const data = await client.execute(Endpoint.liveStreams(categoryId), {
+                requestId: `live_streams_${categoryId || 'all'}`,
+            });
+            return Array.isArray(data) ? data : [];
+        }, { forceRefresh });
     }
 
     /**
