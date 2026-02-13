@@ -79,6 +79,26 @@ class XtreamAuth {
     logout() {
         this._session = null;
     }
+
+    /**
+     * Attempts to restore session from cached credentials.
+     * @returns {Promise<AuthResponse|null>} Returns session if successful, null otherwise
+     */
+    async restoreSession() {
+        try {
+            const { host, port, useSSL } = Settings.server;
+            const { username, password } = Settings.credentials;
+
+            if (!host || !port || !username || !password) {
+                return null;
+            }
+
+            return await this.login(host, port, username, password, useSSL);
+        } catch (error) {
+            console.warn('[XtreamAuth] Failed to restore session:', error.message);
+            return null;
+        }
+    }
 }
 
 export default new XtreamAuth();
