@@ -1,6 +1,7 @@
 import client from './XtreamClient.js';
 import { Endpoint, Router, StreamType } from './Router.js';
 import Cache from '../utils/cache.js';
+import { fetchWithCache } from '../utils/cacheHelpers.js';
 import Settings from '../config/settings.js';
 
 /**
@@ -18,17 +19,13 @@ class VodService {
      */
     async getCategories(forceRefresh = false) {
         const cacheKey = 'vod_categories';
-        if (!forceRefresh && this._cache.has(cacheKey)) {
-            return this._cache.get(cacheKey);
-        }
 
-        const data = await client.execute(Endpoint.vodCategories(), {
-            requestId: 'vod_categories',
-        });
-
-        const categories = Array.isArray(data) ? data : [];
-        this._cache.set(cacheKey, categories);
-        return categories;
+        return fetchWithCache(this._cache, cacheKey, async () => {
+            const data = await client.execute(Endpoint.vodCategories(), {
+                requestId: 'vod_categories',
+            });
+            return Array.isArray(data) ? data : [];
+        }, { forceRefresh });
     }
 
     /**
@@ -42,17 +39,12 @@ class VodService {
             ? `vod_streams_cat_${categoryId}`
             : 'vod_streams_all';
 
-        if (!forceRefresh && this._cache.has(cacheKey)) {
-            return this._cache.get(cacheKey);
-        }
-
-        const data = await client.execute(Endpoint.vodStreams(categoryId), {
-            requestId: `vod_streams_${categoryId || 'all'}`,
-        });
-
-        const streams = Array.isArray(data) ? data : [];
-        this._cache.set(cacheKey, streams);
-        return streams;
+        return fetchWithCache(this._cache, cacheKey, async () => {
+            const data = await client.execute(Endpoint.vodStreams(categoryId), {
+                requestId: `vod_streams_${categoryId || 'all'}`,
+            });
+            return Array.isArray(data) ? data : [];
+        }, { forceRefresh });
     }
 
     /**
@@ -63,19 +55,13 @@ class VodService {
      */
     async getInfo(vodId, forceRefresh = false) {
         const cacheKey = `vod_info_${vodId}`;
-        if (!forceRefresh && this._cache.has(cacheKey)) {
-            return this._cache.get(cacheKey);
-        }
 
-        const data = await client.execute(Endpoint.vodInfo(vodId), {
-            requestId: `vod_info_${vodId}`,
-        });
-
-        if (data) {
-            this._cache.set(cacheKey, data);
-        }
-
-        return data || {};
+        return fetchWithCache(this._cache, cacheKey, async () => {
+            const data = await client.execute(Endpoint.vodInfo(vodId), {
+                requestId: `vod_info_${vodId}`,
+            });
+            return data || {};
+        }, { forceRefresh });
     }
 
     /**
