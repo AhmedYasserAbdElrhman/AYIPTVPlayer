@@ -1,6 +1,7 @@
 import client from './XtreamClient.js';
 import { Endpoint, Router } from './Router.js';
 import Cache from '../utils/cache.js';
+import { fetchWithCache } from '../utils/cacheHelpers.js';
 import Settings from '../config/settings.js';
 
 /**
@@ -22,19 +23,13 @@ class EpgService {
      */
     async getShortEpg(streamId, limit = null, forceRefresh = false) {
         const cacheKey = `epg_short_${streamId}_${limit || 'all'}`;
-        if (!forceRefresh && this._cache.has(cacheKey)) {
-            return this._cache.get(cacheKey);
-        }
 
-        const data = await client.execute(Endpoint.shortEpg(streamId, limit), {
-            requestId: `epg_short_${streamId}`,
-        });
-
-        if (data) {
-            this._cache.set(cacheKey, data);
-        }
-
-        return data || {};
+        return fetchWithCache(this._cache, cacheKey, async () => {
+            const data = await client.execute(Endpoint.shortEpg(streamId, limit), {
+                requestId: `epg_short_${streamId}`,
+            });
+            return data || {};
+        }, { forceRefresh });
     }
 
     /**
@@ -45,19 +40,13 @@ class EpgService {
      */
     async getFullEpg(streamId, forceRefresh = false) {
         const cacheKey = `epg_full_${streamId}`;
-        if (!forceRefresh && this._cache.has(cacheKey)) {
-            return this._cache.get(cacheKey);
-        }
 
-        const data = await client.execute(Endpoint.fullEpg(streamId), {
-            requestId: `epg_full_${streamId}`,
-        });
-
-        if (data) {
-            this._cache.set(cacheKey, data);
-        }
-
-        return data || {};
+        return fetchWithCache(this._cache, cacheKey, async () => {
+            const data = await client.execute(Endpoint.fullEpg(streamId), {
+                requestId: `epg_full_${streamId}`,
+            });
+            return data || {};
+        }, { forceRefresh });
     }
 
     /**
