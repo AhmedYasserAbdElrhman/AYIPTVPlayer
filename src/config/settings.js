@@ -1,3 +1,5 @@
+import SettingsStorage from './SettingsStorage.js';
+
 /**
  * Application settings with reactive state management.
  * Supports event listeners for UI updates when settings change.
@@ -31,7 +33,7 @@ class Settings {
             autoplay: false,
         };
 
-        // Load from localStorage if available (WebOS supports localStorage)
+        // Load from persistent storage if available (WebOS supports localStorage)
         this._loadFromStorage();
     }
 
@@ -160,11 +162,7 @@ class Settings {
         this.server = { host: '', port: '', useSSL: false };
         this.credentials = { username: '', password: '' };
         this.ui = { theme: 'dark', language: 'en', itemsPerPage: 20, autoplay: false };
-        
-        if (typeof localStorage !== 'undefined') {
-            localStorage.removeItem('iptv_settings');
-        }
-        
+        SettingsStorage.clear();
         this._notify('reset', null);
     }
 
@@ -173,16 +171,9 @@ class Settings {
      * @private
      */
     _loadFromStorage() {
-        if (typeof localStorage === 'undefined') return;
-        
-        try {
-            const stored = localStorage.getItem('iptv_settings');
-            if (stored) {
-                const data = JSON.parse(stored);
-                this.import(data);
-            }
-        } catch (error) {
-            console.error('Failed to load settings from storage:', error);
+        const data = SettingsStorage.load();
+        if (data) {
+            this.import(data);
         }
     }
 
@@ -191,14 +182,8 @@ class Settings {
      * @private
      */
     _saveToStorage() {
-        if (typeof localStorage === 'undefined') return;
-        
-        try {
-            const data = this.export(true); // include credentials for persistent login
-            localStorage.setItem('iptv_settings', JSON.stringify(data));
-        } catch (error) {
-            console.error('Failed to save settings to storage:', error);
-        }
+        const data = this.export(true); // include credentials for persistent login
+        SettingsStorage.save(data);
     }
 
     /**
