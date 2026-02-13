@@ -1,6 +1,7 @@
 import client from './XtreamClient.js';
 import { Endpoint } from './Router.js';
 import Settings from '../config/settings.js';
+import AuthResponse from '../models/AuthResponse.js';
 
 /**
  * Handles authentication and connection verification.
@@ -17,7 +18,7 @@ class XtreamAuth {
      * @param {string} username
      * @param {string} password
      * @param {boolean} [useSSL=false]
-     * @returns {Promise<{ userInfo: Object, serverInfo: Object }>}
+     * @returns {Promise<AuthResponse>}
      */
     async login(host, port, username, password, useSSL = false) {
         Settings.setServer(host, port, useSSL);
@@ -36,14 +37,13 @@ class XtreamAuth {
             throw new Error('Invalid server response: missing user_info');
         }
 
-        if (data.user_info.auth === 0) {
+        const authResponse = AuthResponse.fromApi(data);
+
+        if (!authResponse.userInfo.isAuthenticated()) {
             throw new Error('Authentication failed: invalid credentials');
         }
 
-        this._session = {
-            userInfo: data.user_info,
-            serverInfo: data.server_info || {},
-        };
+        this._session = authResponse;
 
         return this._session;
     }
@@ -58,9 +58,7 @@ class XtreamAuth {
 
     isExpired() {
         if (!this._session) return true;
-        const expiry = this._session.userInfo.exp_date;
-        if (!expiry) return false;
-        return Date.now() / 1000 > Number(expiry);
+        return this._session.userInfo.isExpired();
     }
 
     getAccountStatus() {
@@ -70,12 +68,12 @@ class XtreamAuth {
 
     getMaxConnections() {
         if (!this._session) return 0;
-        return Number(this._session.userInfo.max_connections) || 0;
+        return this._session.userInfo.maxConnections || 0;
     }
 
     getActiveConnections() {
         if (!this._session) return 0;
-        return Number(this._session.userInfo.active_cons) || 0;
+        return this._session.userInfo.activeConnections || 0;
     }
 
     logout() {
