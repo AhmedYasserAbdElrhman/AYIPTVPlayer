@@ -1,0 +1,167 @@
+/* ─── Video Player — TV-optimised ────────────────────────────── */
+
+.vplayer {
+    position: relative;
+    background: #000;
+    overflow: hidden;
+    border-radius: 16px;
+}
+
+.vplayer__video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+}
+
+/* ─── Mini Mode — small PiP in corner ────────────────────────── */
+
+.vplayer--mini {
+    position: fixed;
+    z-index: 100;
+    bottom: 140px;
+    right: 72px;
+    width: 480px;
+    height: 270px;
+    border: 3px solid rgba(108, 92, 231, 0.4);
+    border-radius: 16px;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+}
+
+.vplayer--mini .vplayer__overlay {
+    display: none;
+}
+
+/* ─── Fullscreen Mode ────────────────────────────────────────── */
+
+.vplayer--fullscreen {
+    position: fixed;
+    z-index: 200;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+}
+
+/* ─── Overlay ────────────────────────────────────────────────── */
+
+.vplayer__overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    background: linear-gradient(
+        180deg,
+        rgba(0, 0, 0, 0.7) 0%,
+        transparent 30%,
+        transparent 60%,
+        rgba(0, 0, 0, 0.8) 100%
+    );
+    opacity: 0;
+    transition: opacity 200ms ease;
+    pointer-events: none;
+}
+
+.vplayer__overlay--visible {
+    opacity: 1;
+}
+
+/* ── Overlay Top ── */
+
+.vplayer__overlay-top {
+    padding: 36px 48px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.vplayer__title {
+    font-size: 36px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: -0.3px;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.vplayer__subtitle {
+    font-size: 22px;
+    color: rgba(255, 255, 255, 0.65);
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* ── Overlay Bottom ── */
+
+.vplayer__overlay-bottom {
+    padding: 0 48px 36px;
+}
+
+.vplayer__progress-track {
+    width: 100%;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 16px;
+}
+
+.vplayer__progress-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #6c5ce7, #a855f7);
+    border-radius: 3px;
+    will-change: width;
+}
+
+.vplayer__time-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.vplayer__time-current,
+.vplayer__time-total {
+    font-size: 22px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.7);
+    font-variant-numeric: tabular-nums;
+    min-width: 70px;
+}
+
+.vplayer__time-total {
+    text-align: right;
+}
+
+.vplayer__controls-hint {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+}
+
+.vplayer__play-icon {
+    font-size: 28px;
+    color: #fff;
+    width: 56px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(108, 92, 231, 0.6);
+    border-radius: 50%;
+}
+
+/* ─── Error State ────────────────────────────────────────────── */
+
+.vplayer__error {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    background: rgba(0, 0, 0, 0.85);
+    color: #ff4466;
+    font-size: 24px;
+    font-weight: 500;
+}
