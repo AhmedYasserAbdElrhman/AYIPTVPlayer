@@ -3,15 +3,33 @@ import XtreamAuth from '../../api/XtreamAuth.js';
 import TemplateEngine from '../../utils/templateEngine.js';
 
 /**
- * Login page controller.
- * Pure behavior — no HTML, no CSS.
+ * Login page controller — Smart TV remote optimised.
+ *
+ * Navigation is intentionally simple:
+ *  - ArrowDown → focus next element (always, even while editing)
+ *  - ArrowUp   → focus previous element (always, even while editing)
+ *  - Enter/OK  → if input: open keyboard. if toggle: flip. if button: submit.
+ *  - Back      → if editing: close keyboard. else: let platform handle.
+ *
+ * Inputs use `readonly` to prevent keyboard from opening on focus.
+ * Only Enter/OK removes readonly and calls .focus() to trigger IME.
+ * Arrow navigation ALWAYS exits edit mode first, then moves.
  */
+
+// Known "back" keyCodes across TV platforms
+const BACK_KEY_CODES = new Set([
+    461,   // LG WebOS
+    10009, // Samsung Tizen
+    166,   // Some Android TV remotes
+]);
+
 class LoginPage {
     constructor() {
         this._container = null;
         this._focusIndex = 0;
         this._focusables = [];
         this._isLoading = false;
+        this._editingInput = null;  // the input currently being typed into, or null
         this._keyHandler = this._onKeyDown.bind(this);
         this._els = {};
     }
@@ -20,9 +38,11 @@ class LoginPage {
 
     async mount(container) {
         this._container = container;
-
-        // Uses bundled template — no file:// fetch needed
         await TemplateEngine.load('pages/login/login.html', this._container);
+
+        // Make container focusable so we can pull focus away from inputs
+        this._container.setAttribute('tabindex', '-1');
+        this._container.style.outline = 'none';
 
         this._cacheDom();
         this._bindEvents();
@@ -32,11 +52,7 @@ class LoginPage {
 
     destroy() {
         document.removeEventListener('keydown', this._keyHandler);
-
-        if (this._container) {
-            this._container.innerHTML = '';
-        }
-
+        if (this._container) this._container.innerHTML = '';
         this._focusables = [];
         this._els = {};
         this._container = null;
@@ -83,63 +99,156 @@ class LoginPage {
         });
 
         this._focusables.forEach((el, index) => {
-            el.addEventListener('focus', () => this._setFocus(index));
             el.addEventListener('click', () => {
-                if (el === this._els.ssl) this._toggleSSL();
+                this._setFocus(index);
+                if (el.tagName === 'INPUT') {
+                    this._enterEditMode(el);
+                } else if (el === this._els.ssl) {
+                    this._toggleSSL();
+                }
             });
         });
     }
 
-    // ─── TV Remote Navigation ──────────────────────────────────
+    // ─── Key Handling — simple and flat ─────────────────────────
+
+    _isBackKey(e) {
+        if (BACK_KEY_CODES.has(e.keyCode)) return true;
+        if (e.key === 'Escape' || e.key === 'GoBack') return true;
+        return false;
+    }
 
     _onKeyDown(e) {
         if (this._isLoading) return;
 
-        switch (e.key) {
-            case 'ArrowUp':
+        const key = e.key;
+        const isEditing = this._editingInput !== null;
+
+        // ── ArrowDown: ALWAYS exit editing + move to next ──
+        if (key === 'ArrowDown') {
+            e.preventDefault();
+            e.stopPropagation();
+            if (isEditing) this._exitEditMode();
+            this._focusNext();
+            return;
+        }
+
+        // ── ArrowUp: ALWAYS exit editing + move to previous ──
+        if (key === 'ArrowUp') {
+            e.preventDefault();
+            e.stopPropagation();
+            if (isEditing) this._exitEditMode();
+            this._focusPrev();
+            return;
+        }
+
+        // ── Back key: exit editing if active, otherwise let platform handle ──
+        if (this._isBackKey(e)) {
+            if (isEditing) {
                 e.preventDefault();
-                this._moveFocus(-1);
-                break;
-            case 'ArrowDown':
-                e.preventDefault();
-                this._moveFocus(1);
-                break;
-            case 'Enter':
-                e.preventDefault();
-                this._handleEnter();
-                break;
-            default:
-                break;
+                e.stopPropagation();
+                this._exitEditMode();
+            }
+            // If not editing, don't preventDefault — let the TV go back/exit
+            return;
+        }
+
+        // ── Backspace: if editing let it type, if not editing ignore ──
+        if (key === 'Backspace') {
+            if (isEditing) return; // let the keyboard handle it
+            e.preventDefault();
+            return;
+        }
+
+        // ── Enter/OK: activate the focused element ──
+        if (key === 'Enter') {
+            e.preventDefault();
+            e.stopPropagation();
+            // If editing, Enter confirms input (exit edit, move next)
+            if (isEditing) {
+                this._exitEditMode();
+                this._focusNext();
+                return;
+            }
+            this._handleEnter();
+            return;
+        }
+
+        // ── All other keys: if editing, let them through to keyboard ──
+        // If not editing, ignore them
+    }
+
+    // ─── Focus Movement ────────────────────────────────────────
+
+    _focusNext() {
+        const next = this._focusIndex + 1;
+        if (next < this._focusables.length) {
+            this._setFocus(next);
         }
     }
 
-    _moveFocus(direction) {
-        const nextIndex = this._focusIndex + direction;
-        if (nextIndex < 0 || nextIndex >= this._focusables.length) return;
-        this._setFocus(nextIndex);
+    _focusPrev() {
+        const prev = this._focusIndex - 1;
+        if (prev >= 0) {
+            this._setFocus(prev);
+        }
     }
 
+    /**
+     * Visually highlights an element. Does NOT call .focus() on inputs
+     * so the on-screen keyboard stays closed.
+     */
     _setFocus(index) {
-        this._focusables.forEach(el => el.classList.remove('focused'));
+        // Remove all highlights
+        this._focusables.forEach((el) => el.classList.remove('focused'));
+
         this._focusIndex = index;
         const target = this._focusables[index];
         target.classList.add('focused');
 
-        if (target.tagName === 'INPUT') {
-            target.focus();
+        // Keep it visible
+        if (target.scrollIntoView) {
+            target.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
         }
     }
 
     _handleEnter() {
         const focused = this._focusables[this._focusIndex];
 
-        if (focused === this._els.ssl) {
+        if (focused.tagName === 'INPUT') {
+            this._enterEditMode(focused);
+        } else if (focused === this._els.ssl) {
             this._toggleSSL();
         } else if (focused === this._els.button) {
             this._handleLogin();
-        } else if (focused.tagName === 'INPUT') {
-            this._moveFocus(1);
         }
+    }
+
+    // ─── Edit Mode ─────────────────────────────────────────────
+
+    _enterEditMode(input) {
+        // If already editing another input, close it first
+        if (this._editingInput) {
+            this._exitEditMode();
+        }
+
+        this._editingInput = input;
+        input.removeAttribute('readonly');
+        input.classList.add('editing');
+        input.focus();  // THIS is the only .focus() call → opens keyboard
+    }
+
+    _exitEditMode() {
+        const input = this._editingInput;
+        if (!input) return;
+
+        this._editingInput = null;
+        input.setAttribute('readonly', '');
+        input.classList.remove('editing');
+        input.blur();
+
+        // Pull browser focus to container so arrow keys route to keydown
+        this._container.focus();
     }
 
     // ─── SSL Toggle ────────────────────────────────────────────
@@ -150,30 +259,27 @@ class LoginPage {
         toggle.setAttribute('aria-checked', isActive.toString());
     }
 
-    // ─── Validation ��───────────────────────────────────────────
+    // ─── Validation ────────────────────────────────────────────
 
     _validate() {
         let isValid = true;
 
         const fields = [
-            { el: this._els.host, group: this._els.groups.host },
-            { el: this._els.port, group: this._els.groups.port },
+            { el: this._els.host,     group: this._els.groups.host },
+            { el: this._els.port,     group: this._els.groups.port },
             { el: this._els.username, group: this._els.groups.username },
             { el: this._els.password, group: this._els.groups.password },
         ];
 
         fields.forEach(({ el, group }) => {
-            if (!el.value.trim()) {
-                group.classList.add('input-group--error');
-                isValid = false;
-            } else {
-                group.classList.remove('input-group--error');
-            }
+            const empty = !el.value.trim();
+            group.classList.toggle('input-group--error', empty);
+            if (empty) isValid = false;
         });
 
         if (!isValid) {
-            const firstError = fields.findIndex(({ el }) => !el.value.trim());
-            if (firstError !== -1) this._setFocus(firstError);
+            const first = fields.findIndex(({ el }) => !el.value.trim());
+            if (first !== -1) this._setFocus(first);
         }
 
         return isValid;
@@ -192,20 +298,20 @@ class LoginPage {
         const useSSL   = this._els.ssl.classList.contains('toggle--active');
 
         this._setLoading(true);
-        this._showStatus('Connecting to server...', 'loading');
+        this._showStatus('Connecting to server…', 'loading');
 
         try {
             const session = await XtreamAuth.login(host, port, username, password, useSSL);
-
             this._showStatus('Connected successfully!', 'success');
 
             setTimeout(() => {
-                const event = new CustomEvent('login:success', {
-                    detail: { session },
-                    bubbles: true,
-                });
-                this._container.dispatchEvent(event);
-            }, 1200);
+                this._container.dispatchEvent(
+                    new CustomEvent('login:success', {
+                        detail: { session },
+                        bubbles: true,
+                    })
+                );
+            }, 1000);
 
         } catch (error) {
             this._setLoading(false);
@@ -222,27 +328,21 @@ class LoginPage {
     }
 
     _showStatus(message, type) {
-        const status = this._els.status;
-        status.textContent = message;
-        status.className = `login-status login-status--${type} login-status--visible`;
+        const s = this._els.status;
+        s.textContent = message;
+        s.className = `login-status login-status--${type} login-status--visible`;
     }
 
     _getErrorMessage(error) {
         const msg = error.message || '';
-
-        if (msg.includes('timed out') || msg.includes('abort')) {
+        if (msg.includes('timed out') || msg.includes('abort'))
             return 'Connection timed out. Check the server address and port.';
-        }
-        if (msg.includes('Authentication failed') || msg.includes('invalid credentials')) {
+        if (msg.includes('Authentication failed') || msg.includes('invalid credentials'))
             return 'Invalid username or password.';
-        }
-        if (msg.includes('fetch') || msg.includes('network') || msg.includes('Failed')) {
+        if (msg.includes('fetch') || msg.includes('network') || msg.includes('Failed'))
             return 'Cannot reach server. Check your connection.';
-        }
-        if (msg.includes('Invalid server response')) {
+        if (msg.includes('Invalid server response'))
             return 'Server returned an unexpected response.';
-        }
-
         return `Connection failed: ${msg}`;
     }
 
@@ -251,9 +351,9 @@ class LoginPage {
     _loadSavedCredentials() {
         const { server, credentials } = Settings;
 
-        if (server.host) this._els.host.value = server.host;
-        if (server.port) this._els.port.value = server.port;
-        if (credentials.username) this._els.username.value = credentials.username;
+        if (server.host)            this._els.host.value     = server.host;
+        if (server.port)            this._els.port.value     = server.port;
+        if (credentials.username)   this._els.username.value = credentials.username;
 
         if (server.useSSL) {
             this._els.ssl.classList.add('toggle--active');
