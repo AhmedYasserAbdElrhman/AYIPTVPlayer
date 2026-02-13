@@ -3,27 +3,22 @@ import XtreamAuth from '../../api/XtreamAuth.js';
 import TemplateEngine from '../../utils/templateEngine.js';
 import { validateLogin } from './LoginValidator.js';
 import { getAuthErrorMessage } from './AuthErrorMapper.js';
+import { mapRemoteEvent } from '../../input/RemoteKeyMapper.js';
+import { RemoteActions } from '../../input/RemoteActions.js';
 
 /**
- * Login page controller — Smart TV remote optimised.
+ * Login page controller — LG WebOS remote optimised.
  *
  * Navigation is intentionally simple:
- *  - ArrowDown → focus next element (always, even while editing)
- *  - ArrowUp   → focus previous element (always, even while editing)
- *  - Enter/OK  → if input: open keyboard. if toggle: flip. if button: submit.
- *  - Back      → if editing: close keyboard. else: let platform handle.
+ *  - Down  → focus next element (always, even while editing)
+ *  - Up    → focus previous element (always, even while editing)
+ *  - OK    → if input: open keyboard. if toggle: flip. if button: submit.
+ *  - Back  → if editing: close keyboard. else: let platform handle.
  *
  * Inputs use `readonly` to prevent keyboard from opening on focus.
- * Only Enter/OK removes readonly and calls .focus() to trigger IME.
+ * Only OK/Enter removes readonly and calls .focus() to trigger IME.
  * Arrow navigation ALWAYS exits edit mode first, then moves.
  */
-
-// Known "back" keyCodes across TV platforms
-const BACK_KEY_CODES = new Set([
-    461,   // LG WebOS
-    10009, // Samsung Tizen
-    166,   // Some Android TV remotes
-]);
 
 class LoginPage {
     constructor() {
@@ -114,20 +109,14 @@ class LoginPage {
 
     // ─── Key Handling — simple and flat ─────────────────────────
 
-    _isBackKey(e) {
-        if (BACK_KEY_CODES.has(e.keyCode)) return true;
-        if (e.key === 'Escape' || e.key === 'GoBack') return true;
-        return false;
-    }
-
     _onKeyDown(e) {
         if (this._isLoading) return;
 
-        const key = e.key;
+        const action = mapRemoteEvent(e);
         const isEditing = this._editingInput !== null;
 
         // ── ArrowDown: ALWAYS exit editing + move to next ──
-        if (key === 'ArrowDown') {
+        if (action === RemoteActions.DOWN) {
             e.preventDefault();
             e.stopPropagation();
             if (isEditing) this._exitEditMode();
@@ -136,7 +125,7 @@ class LoginPage {
         }
 
         // ── ArrowUp: ALWAYS exit editing + move to previous ──
-        if (key === 'ArrowUp') {
+        if (action === RemoteActions.UP) {
             e.preventDefault();
             e.stopPropagation();
             if (isEditing) this._exitEditMode();
@@ -145,7 +134,7 @@ class LoginPage {
         }
 
         // ── Back key: exit editing if active, otherwise let platform handle ──
-        if (this._isBackKey(e)) {
+        if (action === RemoteActions.BACK) {
             if (isEditing) {
                 e.preventDefault();
                 e.stopPropagation();
@@ -156,14 +145,14 @@ class LoginPage {
         }
 
         // ── Backspace: if editing let it type, if not editing ignore ──
-        if (key === 'Backspace') {
+        if (e.key === 'Backspace') {
             if (isEditing) return; // let the keyboard handle it
             e.preventDefault();
             return;
         }
 
         // ── Enter/OK: activate the focused element ──
-        if (key === 'Enter') {
+        if (action === RemoteActions.OK) {
             e.preventDefault();
             e.stopPropagation();
             // If editing, Enter confirms input (exit edit, move next)
