@@ -1,6 +1,6 @@
 <div class="livetv-page">
 
-    <!-- Background — static gradients, no blur -->
+    <!-- Background -->
     <div class="home-bg">
         <div class="home-bg__orb home-bg__orb--1"></div>
         <div class="home-bg__orb home-bg__orb--2"></div>
@@ -13,39 +13,47 @@
         <!-- Top Bar -->
         <div class="livetv-topbar">
             <div class="livetv-topbar__left">
-                <button class="livetv-back focusable" id="btn-back"
-                        data-focus-row="0" data-focus-col="0">
+                <button class="livetv-back" id="btn-back">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <polyline points="15 18 9 12 15 6"/>
                     </svg>
                 </button>
                 <h1 class="livetv-topbar__title">Live TV</h1>
-                <span class="livetv-topbar__count" id="channel-count">0 channels</span>
+                <span class="livetv-topbar__count" id="channel-count"></span>
             </div>
             <div class="livetv-topbar__right">
                 <span class="livetv-topbar__time" id="topbar-time">--:--</span>
             </div>
         </div>
 
-        <!-- Main Content: Sidebar + Channel Grid -->
+        <!-- Body: Sidebar + Channels + Player -->
         <div class="livetv-body">
 
-            <!-- Categories Sidebar -->
-            <div class="livetv-sidebar" id="sidebar">
-                <div class="livetv-sidebar__header">
-                    <span class="livetv-sidebar__label">Categories</span>
+            <!-- Sidebar -->
+            <div class="livetv-sidebar">
+                <div class="livetv-search" id="cat-search-wrap">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"/>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                    <input type="text" id="cat-search" placeholder="Search categories…" autocomplete="off"/>
                 </div>
-                <div class="livetv-sidebar__list" id="category-list">
-                    <!-- Category items injected here -->
-                </div>
+                <div class="livetv-sidebar__list" id="category-list"></div>
             </div>
 
-            <!-- Channel Grid -->
-            <div class="livetv-grid-wrap">
-                <div class="livetv-grid" id="channel-grid">
-                    <!-- Channel items rendered by VirtualList or direct append -->
+            <!-- Channel List (single column, VirtualList manages content) -->
+            <div class="livetv-channels">
+                <div class="livetv-search" id="ch-search-wrap">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"/>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                    <input type="text" id="ch-search" placeholder="Search channels…" autocomplete="off"/>
                 </div>
+                <div class="livetv-chlist" id="channel-list"></div>
                 <div class="livetv-empty" id="grid-empty" style="display:none;">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
                          stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -56,17 +64,18 @@
                 </div>
             </div>
 
-        </div>
-
-        <!-- Now Playing Bar (visible when mini player active) -->
-        <div class="livetv-nowplaying" id="now-playing" style="display:none;">
-            <div class="livetv-nowplaying__info">
-                <span class="livetv-nowplaying__dot"></span>
-                <span class="livetv-nowplaying__name" id="np-name">---</span>
-            </div>
-            <div class="livetv-nowplaying__actions">
-                <button class="livetv-nowplaying__btn focusable" id="btn-fullscreen"
-                        data-focus-row="3" data-focus-col="0">
+            <!-- Player Panel (right side, inline) -->
+            <div class="player-panel" id="player-panel">
+                <!-- Player slot — goes fullscreen via CSS class, NOT DOM moves -->
+                <div class="player-panel__video" id="player-slot"></div>
+                <div class="player-panel__info">
+                    <div class="player-panel__badge">
+                        <span class="player-panel__dot"></span>
+                        LIVE
+                    </div>
+                    <span class="player-panel__name" id="player-ch-name">No channel selected</span>
+                </div>
+                <div class="player-panel__hint">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <polyline points="15 3 21 3 21 9"/>
@@ -74,10 +83,9 @@
                         <line x1="21" y1="3" x2="14" y2="10"/>
                         <line x1="3" y1="21" x2="10" y2="14"/>
                     </svg>
-                    Fullscreen
-                </button>
-                <button class="livetv-nowplaying__btn livetv-nowplaying__btn--stop focusable"
-                        id="btn-stop" data-focus-row="3" data-focus-col="1">
+                    <span>Press OK to fullscreen</span>
+                </div>
+                <button class="player-panel__stop" id="player-stop">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <rect x="6" y="6" width="12" height="12" rx="1"/>
@@ -85,11 +93,7 @@
                     Stop
                 </button>
             </div>
+
         </div>
-
     </div>
-
-    <!-- Video Player Container (managed by VideoPlayer component) -->
-    <div id="player-container"></div>
-
 </div>
