@@ -27,7 +27,7 @@
             </div>
         </div>
 
-        <!-- Body: Sidebar + Channels + Player -->
+        <!-- Body -->
         <div class="livetv-body">
 
             <!-- Sidebar -->
@@ -43,7 +43,7 @@
                 <div class="livetv-sidebar__list" id="category-list"></div>
             </div>
 
-            <!-- Channel List (single column, VirtualList manages content) -->
+            <!-- Channel List -->
             <div class="livetv-channels">
                 <div class="livetv-search" id="ch-search-wrap">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -64,36 +64,53 @@
                 </div>
             </div>
 
-            <!-- Player Panel (right side, inline) -->
-            <div class="player-panel" id="player-panel">
-                <!-- Player slot — goes fullscreen via CSS class, NOT DOM moves -->
-                <div class="player-panel__video" id="player-slot"></div>
-                <div class="player-panel__info">
-                    <div class="player-panel__badge">
-                        <span class="player-panel__dot"></span>
+            <!-- Info Panel (right side — NO video, just info + controls) -->
+            <div class="info-panel" id="info-panel">
+                <div class="info-panel__header">
+                    <div class="info-panel__badge">
+                        <span class="info-panel__dot"></span>
                         LIVE
                     </div>
-                    <span class="player-panel__name" id="player-ch-name">No channel selected</span>
+                    <span class="info-panel__name" id="info-ch-name">No channel selected</span>
                 </div>
-                <div class="player-panel__hint">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="15 3 21 3 21 9"/>
-                        <polyline points="9 21 3 21 3 15"/>
-                        <line x1="21" y1="3" x2="14" y2="10"/>
-                        <line x1="3" y1="21" x2="10" y2="14"/>
-                    </svg>
-                    <span>Press OK to fullscreen</span>
+
+                <div class="info-panel__body">
+                    <div class="info-panel__icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="2" y="7" width="20" height="15" rx="2" ry="2"/>
+                            <polyline points="17 2 12 7 7 2"/>
+                        </svg>
+                    </div>
+                    <span class="info-panel__hint">Select a channel to start watching</span>
                 </div>
-                <button class="player-panel__stop" id="player-stop">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="6" y="6" width="12" height="12" rx="1"/>
-                    </svg>
-                    Stop
-                </button>
+
+                <div class="info-panel__actions">
+                    <button class="info-panel__btn info-panel__btn--fs" id="info-btn-fullscreen">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="15 3 21 3 21 9"/>
+                            <polyline points="9 21 3 21 3 15"/>
+                            <line x1="21" y1="3" x2="14" y2="10"/>
+                            <line x1="3" y1="21" x2="10" y2="14"/>
+                        </svg>
+                        Fullscreen
+                    </button>
+                    <button class="info-panel__btn info-panel__btn--stop" id="info-btn-stop">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="6" y="6" width="12" height="12" rx="1"/>
+                        </svg>
+                        Stop
+                    </button>
+                </div>
             </div>
 
         </div>
     </div>
+
+    <!-- VideoPlayer mount point — at page level, NOT inside the panel.
+         VideoPlayer uses position:fixed for both mini and fullscreen. -->
+    <div id="player-mount"></div>
+
 </div>

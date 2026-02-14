@@ -508,19 +508,18 @@ class LiveTVPage {
     }
 
     /**
-     * CSS-ONLY fullscreen — NO DOM moves, stream keeps playing
-     * Just toggle a class that makes player-slot position:fixed covering 1920x1080
+     * Fullscreen: let VideoPlayer handle it entirely.
+     * VideoPlayer has its own fullscreen UI (title, controls, progress).
+     * We just tell it to go fullscreen and hand over key control.
      */
     _goFullscreen() {
         this._isFS = true;
-        this._el.playerSlot.classList.add('player-slot--fullscreen');
         this._player.enterFullscreen();
         document.removeEventListener('keydown', this._keyHandler);
     }
 
     _exitFullscreen() {
         this._isFS = false;
-        this._el.playerSlot.classList.remove('player-slot--fullscreen');
         this._player.enterMini();
         document.addEventListener('keydown', this._keyHandler);
     }
