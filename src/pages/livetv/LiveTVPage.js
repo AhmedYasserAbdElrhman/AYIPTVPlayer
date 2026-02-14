@@ -4,7 +4,6 @@ import { RemoteActions } from '../../input/RemoteActions.js';
 import LiveService from '../../api/LiveService.js';
 import VideoPlayer from '../../components/VideoPlayer/VideoPlayer.js';
 import VirtualList from '../../components/VirtualList/VirtualList.js';
-import WebOSBackHandler from '../../utils/WebOSBackHandler.js';
 import { EVENTS } from '../../config/AppConstants.js';
 
 /**
@@ -29,58 +28,58 @@ import { EVENTS } from '../../config/AppConstants.js';
  *  5 = Player panel (OK = fullscreen)
  */
 
-const ALL_CAT_ID    = '__all__';
+const ALL_CAT_ID = '__all__';
 const RECENT_CAT_ID = '__recent__';
-const RECENT_DAYS   = 7;
-const SEARCH_DELAY  = 200;
+const RECENT_DAYS = 7;
+const SEARCH_DELAY = 200;
 const CH_ROW_HEIGHT = 68;   // channel card height + gap
-const CH_COLUMNS    = 1;    // single column
-const CH_BUFFER     = 3;    // extra rows above/below viewport
+const CH_COLUMNS = 1;    // single column
+const CH_BUFFER = 3;    // extra rows above/below viewport
 
 class LiveTVPage {
     constructor() {
-        this._container  = null;
+        this._container = null;
         this._keyHandler = this._onKey.bind(this);
         this._clockTimer = null;
-        this._el         = {};
+        this._el = {};
 
         // Focus
-        this._region      = 2;
-        this._catIdx      = 0;
-        this._chIdx       = 0;
-        this._prev        = null;
+        this._region = 2;
+        this._catIdx = 0;
+        this._chIdx = 0;
+        this._prev = null;
         this._inputActive = false;
 
         // Data
-        this._cats        = [];
-        this._allStreams  = [];
-        this._catStreams  = [];
+        this._cats = [];
+        this._allStreams = [];
+        this._catStreams = [];
         this._viewStreams = [];
-        this._activeCat   = ALL_CAT_ID;
-        this._playingId   = null;
-        this._isFS        = false;     // CSS fullscreen state
+        this._activeCat = ALL_CAT_ID;
+        this._playingId = null;
+        this._isFS = false;     // CSS fullscreen state
 
         // Indexes
-        this._byCat      = new Map();
+        this._byCat = new Map();
         this._recentList = [];
-        this._nameLC     = new Map();
-        this._catNameLC  = [];
+        this._nameLC = new Map();
+        this._catNameLC = [];
 
         // DOM arrays
-        this._catEls     = [];
-        this._visCatEls  = [];
-        this._chEls      = [];    // flat list of channel card elements
+        this._catEls = [];
+        this._visCatEls = [];
+        this._chEls = [];    // flat list of channel card elements
 
         // Search
-        this._catQ       = '';
-        this._chQ        = '';
-        this._searchTid  = null;
+        this._catQ = '';
+        this._chQ = '';
+        this._searchTid = null;
 
         // Components
-        this._player     = new VideoPlayer();
-        this._vlist      = null;   // VirtualList instance
-        this._imgObs     = null;   // IntersectionObserver for lazy images
-        this._destroyed  = false;
+        this._player = new VideoPlayer();
+        this._vlist = null;   // VirtualList instance
+        this._imgObs = null;   // IntersectionObserver for lazy images
+        this._destroyed = false;
     }
 
     /* ═══════════════ LIFECYCLE ═══════════════ */
@@ -97,8 +96,7 @@ class LiveTVPage {
         this._setupImgObserver();
 
         // Player mounts inside the panel slot
-        this._player.mount(this._el.playerSlot);
-
+        this._player.mount(this._el.playerMount);
         this._loadData();
         this._focusTo(2, 0);
     }
@@ -123,18 +121,20 @@ class LiveTVPage {
     _cache() {
         const q = s => this._container.querySelector(s);
         this._el = {
-            time:        q('#topbar-time'),
-            count:       q('#channel-count'),
-            back:        q('#btn-back'),
-            catList:     q('#category-list'),
-            chList:      q('#channel-list'),
-            empty:       q('#grid-empty'),
-            catSearch:   q('#cat-search'),
-            chSearch:    q('#ch-search'),
-            playerSlot:  q('#player-slot'),
-            playerPanel: q('#player-panel'),
-            playerName:  q('#player-ch-name'),
-            playerStop:  q('#player-stop'),
+            time: q('#topbar-time'),
+            count: q('#channel-count'),
+            back: q('#btn-back'),
+            catList: q('#category-list'),
+            chList: q('#channel-list'),
+            empty: q('#grid-empty'),
+            catSearch: q('#cat-search'),
+            chSearch: q('#ch-search'),
+            infoPanel: q('#info-panel'),
+            infoName: q('#info-ch-name'),
+            infoStop: q('#info-btn-stop'),
+            infoFs: q('#info-btn-fullscreen'),
+            playerMount: q('#player-mount'),
+            playerPanel: q('#info-panel'),
         };
     }
 
@@ -170,17 +170,18 @@ class LiveTVPage {
 
         // Player panel click → fullscreen (except stop button)
         this._el.playerPanel.addEventListener('click', (e) => {
-            if (e.target.closest('#player-stop')) return;
+            if (e.target.closest('#info-btn-stop') || e.target.closest('#info-btn-fullscreen')) return;
             if (this._player.isActive()) this._goFullscreen();
         });
 
-        this._el.playerStop.addEventListener('click', () => this._stop());
+        this._el.infoStop.addEventListener('click', () => this._stop());
+        this._el.infoFs.addEventListener('click', () => this._goFullscreen());
 
         // Player events — back from fullscreen
-        this._el.playerSlot.addEventListener('player:back', () => {
+        this._el.playerMount.addEventListener('player:back', () => {
             if (this._isFS) this._exitFullscreen();
         });
-        this._el.playerSlot.addEventListener('player:error', () => this._stop());
+        this._el.playerMount.addEventListener('player:error', () => this._stop());
 
         this._container.addEventListener(EVENTS.PLAYER_MINIMIZE_REQUEST, () => {
             if (this._isFS) this._exitFullscreen();
@@ -336,11 +337,11 @@ class LiveTVPage {
 
         // Create VirtualList — only renders visible rows
         this._vlist = new VirtualList({
-            container:  this._el.chList,
+            container: this._el.chList,
             itemHeight: CH_ROW_HEIGHT,
-            columns:    CH_COLUMNS,
-            items:      streams,
-            buffer:     CH_BUFFER,
+            columns: CH_COLUMNS,
+            items: streams,
+            buffer: CH_BUFFER,
             renderItem: (stream, index) => this._createChCard(stream, index),
         });
     }
@@ -468,8 +469,8 @@ class LiveTVPage {
         );
 
         this._playingId = stream.stream_id;
-        this._el.playerName.textContent = stream.name || 'Unknown';
-        this._el.playerPanel.classList.add('player-panel--active');
+        this._el.infoName.textContent = stream.name || 'Unknown';
+        this._el.playerPanel.classList.add('info-panel--active');
 
         // Mark playing card — only update visible ones
         const sid = String(stream.stream_id);
@@ -495,8 +496,8 @@ class LiveTVPage {
 
         this._player.stop();
         this._playingId = null;
-        this._el.playerPanel.classList.remove('player-panel--active');
-        this._el.playerName.textContent = 'No channel selected';
+        this._el.playerPanel.classList.remove('info-panel--active');
+        this._el.infoName.textContent = 'No channel selected';
 
         for (let i = 0, n = this._chEls.length; i < n; i++) {
             const el = this._chEls[i];
@@ -562,10 +563,10 @@ class LiveTVPage {
             case RemoteActions.BACK:
                 this._player.isActive() ? this._stop() : this._goBack();
                 break;
-            case RemoteActions.OK:    this._enter(); break;
-            case RemoteActions.UP:    this._up();    break;
-            case RemoteActions.DOWN:  this._down();  break;
-            case RemoteActions.LEFT:  this._left();  break;
+            case RemoteActions.OK: this._enter(); break;
+            case RemoteActions.UP: this._up(); break;
+            case RemoteActions.DOWN: this._down(); break;
+            case RemoteActions.LEFT: this._left(); break;
             case RemoteActions.RIGHT: this._right(); break;
         }
     }
