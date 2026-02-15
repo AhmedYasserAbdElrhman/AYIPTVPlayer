@@ -1,0 +1,275 @@
+/* ─── Media Page Layout (Movies & Series) — 1920×1080 TV ─────── */
+/* PERF: zero transitions on grid items, contain: on panels       */
+
+.media-page {
+    width: 1920px;
+    height: 1080px;
+    display: flex;
+    position: relative;
+    overflow: hidden;
+    background: #0b0b12;
+    contain: strict;
+}
+
+.media-layout {
+    position: relative;
+    z-index: 1;
+    width: 1920px;
+    height: 1080px;
+    display: flex;
+    flex-direction: column;
+    padding: 36px 56px 32px;
+    opacity: 0;
+    animation: homeIn 300ms 60ms ease-out forwards;
+}
+
+/* ─── Top Bar ─── */
+
+.media-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    margin-bottom: 28px;
+}
+
+.media-topbar__left {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.media-topbar__title {
+    font-size: 34px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #a855f7, #6c5ce7);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.media-topbar__count {
+    font-size: 22px;
+    color: #6b6b80;
+}
+
+/* ─── Body ─── */
+
+.media-body {
+    flex: 1;
+    display: flex;
+    gap: 24px;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* ─── Search Bar (shared with LiveTV) ─── */
+
+.media-search {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: #0e0e16;
+    border: 2px solid rgba(255,255,255,0.04);
+    border-radius: 10px;
+    flex-shrink: 0;
+    margin-bottom: 8px;
+}
+.media-search.focused { border-color: #6c5ce7; }
+.media-search svg { width: 20px; height: 20px; color: #4a4a5e; flex-shrink: 0; }
+.media-search input {
+    flex: 1; background: none; border: none; outline: none;
+    font-family: inherit; font-size: 20px; color: #c8c8d8;
+    caret-color: #6c5ce7; min-width: 0; padding: 0;
+}
+.media-search input::placeholder { color: #3e3e52; }
+
+/* ─── Content Grid ─── */
+
+.media-grid-wrap {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    contain: layout style;
+}
+
+.media-grid {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    -webkit-overflow-scrolling: touch;
+    padding: 8px;
+    position: relative;
+    contain: layout style;
+}
+
+.media-grid::-webkit-scrollbar {
+    display: none;
+}
+
+/* VirtualList rows */
+.media-grid .vlist__row,
+.media-grid__row {
+    display: flex;
+    gap: 20px;
+}
+
+/* ─── Loading State ─── */
+
+.media-loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    color: #6b6b80;
+    font-size: 24px;
+    background: rgba(11, 11, 18, 0.8);
+    z-index: 5;
+}
+
+.media-loading__spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(108, 92, 231, 0.2);
+    border-top-color: #6c5ce7;
+    border-radius: 50%;
+    animation: spin 700ms linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ─── Detail Modal ─── */
+
+.media-detail {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(11, 11, 18, 0.92);
+    opacity: 0;
+    animation: fadeIn 200ms ease-out forwards;
+}
+
+@keyframes fadeIn {
+    to { opacity: 1; }
+}
+
+.media-detail__card {
+    width: 900px;
+    max-height: 800px;
+    background: #12121a;
+    border: 2px solid rgba(255, 255, 255, 0.06);
+    border-radius: 20px;
+    overflow: hidden;
+    display: flex;
+}
+
+.media-detail__poster {
+    width: 320px;
+    flex-shrink: 0;
+    background: #1a1a26;
+}
+
+.media-detail__poster img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.media-detail__info {
+    flex: 1;
+    padding: 36px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    overflow-y: auto;
+}
+
+.media-detail__title {
+    font-size: 32px;
+    font-weight: 700;
+    color: #e8e8f0;
+}
+
+.media-detail__meta {
+    display: flex;
+    gap: 20px;
+    font-size: 20px;
+    color: #6b6b80;
+}
+
+.media-detail__rating {
+    color: #f0c040;
+    font-weight: 600;
+}
+
+.media-detail__plot {
+    font-size: 20px;
+    color: #8b8ba0;
+    line-height: 1.6;
+}
+
+.media-detail__actions {
+    display: flex;
+    gap: 16px;
+    margin-top: auto;
+    padding-top: 20px;
+}
+
+/* Detail buttons — NO will-change, NO transition */
+.media-detail__btn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 18px 36px;
+    font-family: inherit;
+    font-size: 22px;
+    font-weight: 600;
+    color: #fff;
+    background: linear-gradient(135deg, #6c5ce7, #a855f7);
+    border: 3px solid transparent;
+    border-radius: 14px;
+    cursor: pointer;
+}
+
+.media-detail__btn.focused {
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.media-detail__btn--secondary {
+    background: #1a1a26;
+    color: #8b8ba0;
+}
+
+.media-detail__btn--secondary.focused {
+    border-color: #6c5ce7;
+    color: #e8e8f0;
+}
+
+.media-detail__btn svg {
+    width: 26px;
+    height: 26px;
+}
+
+/* ─── Player Container ─── */
+
+#player-container {
+    position: absolute;
+    top: 0; left: 0;
+    width: 0; height: 0;
+    overflow: visible;
+    z-index: 50;
+}
