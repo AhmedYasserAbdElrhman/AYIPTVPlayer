@@ -37,6 +37,8 @@ const CH_COLUMNS = 1;    // single column
 const CH_BUFFER = 3;    // extra rows above/below viewport
 
 class LiveTVPage {
+    static PAGE_ID = 'livetv';
+
     constructor() {
         this._container = null;
         this._keyHandler = this._onKey.bind(this);
@@ -57,6 +59,7 @@ class LiveTVPage {
         this._viewStreams = [];
         this._activeCat = ALL_CAT_ID;
         this._playingId = null;
+        this._isFS = false;     // fullscreen state
 
         // Indexes
         this._byCat = new Map();
@@ -176,10 +179,13 @@ class LiveTVPage {
         this._el.infoStop.addEventListener('click', () => this._stop());
         this._el.infoFs.addEventListener('click', () => this._goFullscreen());
 
-        // Player events
+        // Player events — back from fullscreen
         this._el.playerMount.addEventListener('player:back', () => {
-            // Mini player back — just stop
-            this._stop();
+            if (this._isFS) {
+                this._exitFullscreen();
+            } else {
+                this._stop();
+            }
         });
         this._el.playerMount.addEventListener('player:error', () => this._stop());
 
@@ -503,40 +509,40 @@ class LiveTVPage {
     }
 
     /**
-     * Fullscreen: navigate to the standalone PlayerPage.
-     * The current stream URL/title is passed via PLAY_REQUEST event.
-     * The mini player continues running (not stopped) so returning
-     * from PlayerPage feels instant.
+     * Fullscreen: let VideoPlayer handle it entirely.
+     * VideoPlayer has its own fullscreen UI (title, controls, progress).
+     * We just tell it to go fullscreen and hand over key control.
      */
     _goFullscreen() {
-        if (!this._playingId) return;
+        if (!this._player.isActive()) return;
+        this._isFS = true;
+        this._player.enterFullscreen();
+        document.removeEventListener('keydown', this._keyHandler);
+        // Push a history entry so back exits fullscreen (not the page)
+        history.pushState({ page: 'livetv', fullscreen: true }, '', window.location.href);
+    }
 
-        // Find the currently playing stream to get its info
-        const stream = this._viewStreams.find(s => s.stream_id === this._playingId)
-            || this._allStreams.find(s => s.stream_id === this._playingId);
+    _exitFullscreen() {
+        this._isFS = false;
+        this._player.enterMini();
+        document.addEventListener('keydown', this._keyHandler);
+    }
 
-        if (!stream) return;
-
-        const url = LiveService.getStreamUrl(
-            stream.stream_id,
-            stream.container_extension || 'm3u8'
-        );
-
-        this._container.dispatchEvent(
-            new CustomEvent(EVENTS.PLAY_REQUEST, {
-                detail: {
-                    url,
-                    title: stream.name || 'Live TV',
-                    subtitle: 'Live',
-                },
-                bubbles: true,
-            })
-        );
+    /**
+     * Called by main.js when a back-navigation lands on this same page
+     * (e.g. popping a fullscreen history entry).
+     */
+    onHistoryBack() {
+        if (this._isFS) {
+            this._exitFullscreen();
+        }
     }
 
     /* ═══════════════ KEY HANDLER ═══════════════ */
 
     _onKey(e) {
+        if (this._isFS) return;  // player handles keys in fullscreen
+
         const action = mapRemoteEvent(e);
         if (!action) return;
 

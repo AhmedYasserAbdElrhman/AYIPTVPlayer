@@ -52,39 +52,39 @@ class App {
         }
     }
 
-    async _showLogin() {
+    async _showLogin(skipPush) {
         this._destroyCurrent();
         this._currentPage = new LoginPage();
         await this._currentPage.mount(this._container);
-        WebOSBackHandler.pushPageState(PAGES.LOGIN);
+        if (!skipPush) WebOSBackHandler.pushPageState(PAGES.LOGIN);
     }
 
-    async _showHome(session) {
+    async _showHome(session, skipPush) {
         this._destroyCurrent();
         this._currentPage = new HomePage();
         await this._currentPage.mount(this._container, session);
-        WebOSBackHandler.pushPageState(PAGES.HOME);
+        if (!skipPush) WebOSBackHandler.pushPageState(PAGES.HOME);
     }
 
-    async _showLiveTV() {
+    async _showLiveTV(skipPush) {
         this._destroyCurrent();
         this._currentPage = new LiveTVPage();
         await this._currentPage.mount(this._container);
-        WebOSBackHandler.pushPageState(PAGES.LIVETV);
+        if (!skipPush) WebOSBackHandler.pushPageState(PAGES.LIVETV);
     }
 
-    async _showMovies() {
+    async _showMovies(skipPush) {
         this._destroyCurrent();
         this._currentPage = new MoviesPage();
         await this._currentPage.mount(this._container);
-        WebOSBackHandler.pushPageState(PAGES.MOVIES);
+        if (!skipPush) WebOSBackHandler.pushPageState(PAGES.MOVIES);
     }
 
-    async _showSeries() {
+    async _showSeries(skipPush) {
         this._destroyCurrent();
         this._currentPage = new SeriesPage();
         await this._currentPage.mount(this._container);
-        WebOSBackHandler.pushPageState(PAGES.SERIES);
+        if (!skipPush) WebOSBackHandler.pushPageState(PAGES.SERIES);
     }
 
     async _showPlayer(streamInfo) {
@@ -136,21 +136,30 @@ class App {
 
             // If we have a recorded state, handle it
             if (state && state.page) {
+                // If we're already on this page (e.g. exiting fullscreen),
+                // let the page handle it instead of re-creating it.
+                if (this._currentPage?.constructor?.PAGE_ID === state.page) {
+                    if (typeof this._currentPage.onHistoryBack === 'function') {
+                        this._currentPage.onHistoryBack(state);
+                    }
+                    return;
+                }
+
                 switch (state.page) {
                     case PAGES.HOME:
-                        await this._showHome(XtreamAuth.getSession());
+                        await this._showHome(XtreamAuth.getSession(), true);
                         break;
                     case PAGES.LIVETV:
-                        this._showLiveTV();
+                        this._showLiveTV(true);
                         break;
                     case PAGES.MOVIES:
-                        this._showMovies();
+                        this._showMovies(true);
                         break;
                     case PAGES.SERIES:
-                        this._showSeries();
+                        this._showSeries(true);
                         break;
                     case PAGES.LOGIN:
-                        this._showLogin();
+                        this._showLogin(true);
                         break;
                 }
             } else if (!state) {
@@ -168,9 +177,9 @@ class App {
                     // On other page, go back to home
                     const session = XtreamAuth.getSession();
                     if (session) {
-                        await this._showHome(session);
+                        await this._showHome(session, true);
                     } else {
-                        this._showLogin();
+                        this._showLogin(true);
                     }
                 }
             }
