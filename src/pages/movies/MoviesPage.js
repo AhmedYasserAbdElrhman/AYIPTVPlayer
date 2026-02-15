@@ -2,7 +2,6 @@ import TemplateEngine from '../../utils/templateEngine.js';
 import { mapRemoteEvent } from '../../input/RemoteKeyMapper.js';
 import { RemoteActions } from '../../input/RemoteActions.js';
 import VodService from '../../api/VodService.js';
-import VideoPlayer from '../../components/VideoPlayer/VideoPlayer.js';
 import MediaCard from '../../components/MediaCard/MediaCard.js';
 import VirtualList from '../../components/VirtualList/VirtualList.js';
 import { EVENTS } from '../../config/AppConstants.js';
@@ -30,61 +29,58 @@ import { EVENTS } from '../../config/AppConstants.js';
  *  4 = Detail modal actions
  */
 
-const GRID_COLUMNS      = 6;
-const GRID_ROW_HEIGHT   = 380;  // card height + gap
-const GRID_BUFFER       = 2;
+const GRID_COLUMNS = 6;
+const GRID_ROW_HEIGHT = 380;  // card height + gap
+const GRID_BUFFER = 2;
 const ALL_CATEGORIES_ID = '__all__';
-const SEARCH_DELAY      = 200;
+const SEARCH_DELAY = 200;
 
 class MoviesPage {
     constructor() {
-        this._container   = null;
-        this._keyHandler  = this._onKey.bind(this);
-        this._clockTimer  = null;
-        this._els         = {};
+        this._container = null;
+        this._keyHandler = this._onKey.bind(this);
+        this._clockTimer = null;
+        this._els = {};
 
         // Focus
-        this._region      = 2;   // 0=back, 1=search, 2=sidebar, 3=grid, 4=detail
-        this._sidebarIdx  = 0;
-        this._gridRow     = 0;
-        this._gridCol     = 0;
-        this._detailIdx   = 0;
-        this._prev        = null;
+        this._region = 2;   // 0=back, 1=search, 2=sidebar, 3=grid, 4=detail
+        this._sidebarIdx = 0;
+        this._gridRow = 0;
+        this._gridCol = 0;
+        this._detailIdx = 0;
+        this._prev = null;
         this._inputActive = false;
 
         // Data
-        this._categories    = [];
-        this._allItems      = [];
-        this._catItems      = [];   // current category items
-        this._viewItems     = [];   // after search filter
-        this._activeCatId   = ALL_CATEGORIES_ID;
+        this._categories = [];
+        this._allItems = [];
+        this._catItems = [];   // current category items
+        this._viewItems = [];   // after search filter
+        this._activeCatId = ALL_CATEGORIES_ID;
 
         // Indexes (pre-built for O(1) lookups)
-        this._byCat         = new Map();
-        this._nameLC        = new Map();
-        this._catNameLC     = [];
+        this._byCat = new Map();
+        this._nameLC = new Map();
+        this._catNameLC = [];
 
         // DOM arrays
-        this._catEls        = [];
-        this._visCatEls     = [];
+        this._catEls = [];
+        this._visCatEls = [];
 
         // Rendering
-        this._vlist         = null;
-        this._imgObs        = null;
-        this._isDestroyed   = false;
+        this._vlist = null;
+        this._imgObs = null;
+        this._isDestroyed = false;
 
         // Search
-        this._searchQ       = '';
-        this._searchTid     = null;
+        this._searchQ = '';
+        this._searchTid = null;
 
         // Detail
-        this._detailOpen    = false;
-        this._detailItem    = null;
-        this._detailEl      = null;
-        this._detailBtns    = [];
-
-        // Player
-        this._player = new VideoPlayer();
+        this._detailOpen = false;
+        this._detailItem = null;
+        this._detailEl = null;
+        this._detailBtns = [];
     }
 
     /* ═══════════════ LIFECYCLE ═══════════════ */
@@ -99,7 +95,6 @@ class MoviesPage {
         this._bindEvents();
         this._startClock();
         this._setupImgObserver();
-        this._player.mount(this._els.playerContainer);
 
         this._showLoading(true);
         this._loadData();
@@ -113,7 +108,6 @@ class MoviesPage {
         clearTimeout(this._searchTid);
         if (this._vlist) { this._vlist.destroy(); this._vlist = null; }
         if (this._imgObs) { this._imgObs.disconnect(); this._imgObs = null; }
-        this._player.destroy();
         this._closeDetail();
         if (this._container) this._container.innerHTML = '';
         this._catEls = this._visCatEls = [];
@@ -128,15 +122,14 @@ class MoviesPage {
     _cacheDom() {
         const q = s => this._container.querySelector(s);
         this._els = {
-            time:            q('#topbar-time'),
-            itemCount:       q('#item-count'),
-            btnBack:         q('#btn-back'),
-            search:          q('#grid-search'),
-            categoryList:    q('#category-list'),
-            contentGrid:     q('#content-grid'),
-            gridEmpty:       q('#grid-empty'),
-            gridLoading:     q('#grid-loading'),
-            playerContainer: q('#player-container'),
+            time: q('#topbar-time'),
+            itemCount: q('#item-count'),
+            btnBack: q('#btn-back'),
+            search: q('#grid-search'),
+            categoryList: q('#category-list'),
+            contentGrid: q('#content-grid'),
+            gridEmpty: q('#grid-empty'),
+            gridLoading: q('#grid-loading'),
         };
     }
 
@@ -167,20 +160,6 @@ class MoviesPage {
     _bindEvents() {
         document.addEventListener('keydown', this._keyHandler);
         this._els.btnBack.addEventListener('click', () => this._goBack());
-
-        this._els.playerContainer.addEventListener('player:back', () => {
-            if (this._player.isFullscreen()) {
-                this._player.stop();
-                document.addEventListener('keydown', this._keyHandler);
-            }
-        });
-
-        this._container.addEventListener(EVENTS.PLAYER_MINIMIZE_REQUEST, () => {
-            if (this._player.isFullscreen()) {
-                this._player.stop();
-                document.addEventListener('keydown', this._keyHandler);
-            }
-        });
 
         // Search input
         if (this._els.search) {
@@ -300,11 +279,11 @@ class MoviesPage {
         this._updateCount();
 
         this._vlist = new VirtualList({
-            container:  this._els.contentGrid,
+            container: this._els.contentGrid,
             itemHeight: GRID_ROW_HEIGHT,
-            columns:    GRID_COLUMNS,
-            items:      items,
-            buffer:     GRID_BUFFER,
+            columns: GRID_COLUMNS,
+            items: items,
+            buffer: GRID_BUFFER,
             renderItem: (item, index) => this._createCard(item, index),
         });
     }
@@ -408,35 +387,35 @@ class MoviesPage {
         overlay.className = 'media-detail';
 
         const cover = info.cover || info.stream_icon || item.cover || item.stream_icon || '';
-        const name  = info.name || item.name || 'Untitled';
-        const year  = info.year || info.releasedate || '';
+        const name = info.name || item.name || 'Untitled';
+        const year = info.year || info.releasedate || '';
         const rating = info.rating || '';
         const genre = info.genre || '';
-        const plot  = info.plot || info.description || '';
+        const plot = info.plot || info.description || '';
         const duration = info.duration || '';
 
         overlay.innerHTML =
             '<div class="media-detail__card">' +
-                '<div class="media-detail__poster">' +
-                    (cover ? '<img src="' + _escapeAttr(cover) + '" alt="">' : '') +
-                '</div>' +
-                '<div class="media-detail__info">' +
-                    '<h2 class="media-detail__title">' + _escapeHtml(name) + '</h2>' +
-                    '<div class="media-detail__meta">' +
-                        (year ? '<span>' + _escapeHtml(String(year)) + '</span>' : '') +
-                        (duration ? '<span>' + _escapeHtml(duration) + '</span>' : '') +
-                        (genre ? '<span>' + _escapeHtml(genre) + '</span>' : '') +
-                        (rating ? '<span class="media-detail__rating">★ ' + _escapeHtml(String(rating)) + '</span>' : '') +
-                    '</div>' +
-                    (plot ? '<p class="media-detail__plot">' + _escapeHtml(plot) + '</p>' : '') +
-                    '<div class="media-detail__actions">' +
-                        '<button class="media-detail__btn" id="detail-play">' +
-                            '<svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21"/></svg>' +
-                            'Play' +
-                        '</button>' +
-                        '<button class="media-detail__btn media-detail__btn--secondary" id="detail-close">Close</button>' +
-                    '</div>' +
-                '</div>' +
+            '<div class="media-detail__poster">' +
+            (cover ? '<img src="' + _escapeAttr(cover) + '" alt="">' : '') +
+            '</div>' +
+            '<div class="media-detail__info">' +
+            '<h2 class="media-detail__title">' + _escapeHtml(name) + '</h2>' +
+            '<div class="media-detail__meta">' +
+            (year ? '<span>' + _escapeHtml(String(year)) + '</span>' : '') +
+            (duration ? '<span>' + _escapeHtml(duration) + '</span>' : '') +
+            (genre ? '<span>' + _escapeHtml(genre) + '</span>' : '') +
+            (rating ? '<span class="media-detail__rating">★ ' + _escapeHtml(String(rating)) + '</span>' : '') +
+            '</div>' +
+            (plot ? '<p class="media-detail__plot">' + _escapeHtml(plot) + '</p>' : '') +
+            '<div class="media-detail__actions">' +
+            '<button class="media-detail__btn" id="detail-play">' +
+            '<svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21"/></svg>' +
+            'Play' +
+            '</button>' +
+            '<button class="media-detail__btn media-detail__btn--secondary" id="detail-close">Close</button>' +
+            '</div>' +
+            '</div>' +
             '</div>';
 
         this._container.appendChild(overlay);
@@ -481,19 +460,21 @@ class MoviesPage {
         this._closeDetail();
         const ext = item.container_extension || 'mp4';
         const url = VodService.getStreamUrl(item.stream_id || item.id, ext);
-        this._player.load({
-            url,
-            title: item.name || 'Movie',
-            subtitle: item.year ? String(item.year) : '',
-            mode: 'fullscreen',
-        });
-        document.removeEventListener('keydown', this._keyHandler);
+        this._container.dispatchEvent(
+            new CustomEvent(EVENTS.PLAY_REQUEST, {
+                detail: {
+                    url,
+                    title: item.name || 'Movie',
+                    subtitle: item.year ? String(item.year) : '',
+                },
+                bubbles: true,
+            })
+        );
     }
 
     /* ═══════════════ KEY HANDLER ═══════════════ */
 
     _onKey(e) {
-        if (this._player.isFullscreen()) return;
         const action = mapRemoteEvent(e);
         if (!action) return;
 
@@ -521,10 +502,10 @@ class MoviesPage {
                 if (this._detailOpen) this._closeDetail();
                 else this._goBack();
                 break;
-            case RemoteActions.OK:    this._enter(); break;
-            case RemoteActions.UP:    this._up();    break;
-            case RemoteActions.DOWN:  this._down();  break;
-            case RemoteActions.LEFT:  this._left();  break;
+            case RemoteActions.OK: this._enter(); break;
+            case RemoteActions.UP: this._up(); break;
+            case RemoteActions.DOWN: this._down(); break;
+            case RemoteActions.LEFT: this._left(); break;
             case RemoteActions.RIGHT: this._right(); break;
         }
     }
