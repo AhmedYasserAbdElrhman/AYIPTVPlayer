@@ -5,6 +5,7 @@ import { validateLogin } from './LoginValidator.js';
 import { getAuthErrorMessage } from './AuthErrorMapper.js';
 import { mapRemoteEvent } from '../../input/RemoteKeyMapper.js';
 import { RemoteActions } from '../../input/RemoteActions.js';
+import { EVENTS } from '../../config/AppConstants.js';
 
 /**
  * Login page controller — LG WebOS remote optimised.
@@ -59,17 +60,17 @@ class LoginPage {
 
     _cacheDom() {
         this._els = {
-            form:     this._container.querySelector('#login-form'),
-            host:     this._container.querySelector('#input-host'),
-            port:     this._container.querySelector('#input-port'),
+            form: this._container.querySelector('#login-form'),
+            host: this._container.querySelector('#input-host'),
+            port: this._container.querySelector('#input-port'),
             username: this._container.querySelector('#input-username'),
             password: this._container.querySelector('#input-password'),
-            ssl:      this._container.querySelector('#toggle-ssl'),
-            button:   this._container.querySelector('#btn-login'),
-            status:   this._container.querySelector('#login-status'),
+            ssl: this._container.querySelector('#toggle-ssl'),
+            button: this._container.querySelector('#btn-login'),
+            status: this._container.querySelector('#login-status'),
             groups: {
-                host:     this._container.querySelector('#group-host'),
-                port:     this._container.querySelector('#group-port'),
+                host: this._container.querySelector('#group-host'),
+                port: this._container.querySelector('#group-port'),
                 username: this._container.querySelector('#group-username'),
                 password: this._container.querySelector('#group-password'),
             },
@@ -263,8 +264,8 @@ class LoginPage {
         const { isValid, errors } = validateLogin(values);
 
         const fields = [
-            { key: 'host',     el: this._els.host,     group: this._els.groups.host },
-            { key: 'port',     el: this._els.port,     group: this._els.groups.port },
+            { key: 'host', el: this._els.host, group: this._els.groups.host },
+            { key: 'port', el: this._els.port, group: this._els.groups.port },
             { key: 'username', el: this._els.username, group: this._els.groups.username },
             { key: 'password', el: this._els.password, group: this._els.groups.password },
         ];
@@ -290,11 +291,11 @@ class LoginPage {
         if (this._isLoading) return;
         if (!this._validate()) return;
 
-        const host     = this._els.host.value.trim();
-        const port     = this._els.port.value.trim();
+        const host = this._els.host.value.trim();
+        const port = this._els.port.value.trim();
         const username = this._els.username.value.trim();
         const password = this._els.password.value;
-        const useSSL   = this._els.ssl.classList.contains('toggle--active');
+        const useSSL = this._els.ssl.classList.contains('toggle--active');
 
         this._setLoading(true);
         this._showStatus('Connecting to server…', 'loading');
@@ -305,7 +306,7 @@ class LoginPage {
 
             setTimeout(() => {
                 this._container.dispatchEvent(
-                    new CustomEvent('login:success', {
+                    new CustomEvent(EVENTS.LOGIN_SUCCESS, {
                         detail: { session },
                         bubbles: true,
                     })
@@ -341,9 +342,9 @@ class LoginPage {
     _loadSavedCredentials() {
         const { server, credentials } = Settings;
 
-        if (server.host)            this._els.host.value     = server.host;
-        if (server.port)            this._els.port.value     = server.port;
-        if (credentials.username)   this._els.username.value = credentials.username;
+        if (server.host) this._els.host.value = server.host;
+        if (server.port) this._els.port.value = server.port;
+        if (credentials.username) this._els.username.value = credentials.username;
 
         if (server.useSSL) {
             this._els.ssl.classList.add('toggle--active');
