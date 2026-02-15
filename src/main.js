@@ -7,6 +7,7 @@ import './pages/movies/media.css';
 import './pages/series/series-extra.css';
 import './components/VideoPlayer/VideoPlayer.css';
 import './components/MediaCard/MediaCard.css';
+import './pages/player/player.css';
 
 import LoginPage from './pages/login/login.js';
 import HomePage from './pages/home/home.js';
@@ -14,6 +15,7 @@ import XtreamAuth from './api/XtreamAuth.js';
 import LiveTVPage from './pages/livetv/LiveTVPage.js';
 import MoviesPage from './pages/movies/MoviesPage.js';
 import SeriesPage from './pages/series/SeriesPage.js';
+import PlayerPage from './pages/player/PlayerPage.js';
 import TemplateEngine from './utils/templateEngine.js';
 import templates from 'virtual:templates';
 import WebOSBackHandler from './utils/WebOSBackHandler.js';
@@ -85,6 +87,13 @@ class App {
         WebOSBackHandler.pushPageState(PAGES.SERIES);
     }
 
+    async _showPlayer(streamInfo) {
+        this._destroyCurrent();
+        this._currentPage = new PlayerPage();
+        await this._currentPage.mount(this._container, streamInfo);
+        WebOSBackHandler.pushPageState(PAGES.PLAYER);
+    }
+
     _bindGlobalEvents() {
         this._container.addEventListener(EVENTS.LOGIN_SUCCESS, async (e) => {
             const { session } = e.detail;
@@ -114,20 +123,14 @@ class App {
             // TODO: Handle opening a recent/favourite item
         });
 
+        // Any page can request playback — navigate to PlayerPage
+        this._container.addEventListener(EVENTS.PLAY_REQUEST, (e) => {
+            this._showPlayer(e.detail);
+        });
+
         // Handle WebOS back button via History API popstate
         document.addEventListener(EVENTS.WEBOS_BACK, async (e) => {
             console.log('[App] Back button pressed, state:', e.detail.state);
-
-            // Check if a video player is in fullscreen mode
-            const fullscreenPlayer = document.querySelector(SELECTORS.FULLSCREEN_PLAYER);
-            if (fullscreenPlayer) {
-                console.log('[App] Video player in fullscreen, minimizing...');
-                // Dispatch event to the current page to minimize the player
-                this._container.dispatchEvent(
-                    new CustomEvent(EVENTS.PLAYER_MINIMIZE_REQUEST, { bubbles: true })
-                );
-                return;
-            }
 
             const state = e.detail.state;
 
