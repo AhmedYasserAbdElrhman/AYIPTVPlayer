@@ -2,6 +2,7 @@ import TemplateEngine from '../../utils/templateEngine.js';
 import { mapRemoteEvent } from '../../input/RemoteKeyMapper.js';
 import { RemoteActions } from '../../input/RemoteActions.js';
 import { PAGES, EVENTS } from '../../config/AppConstants.js';
+import RecentCard from '../../components/RecentCard/RecentCard.js';
 
 /**
  * Home page controller — Smart TV remote optimised.
@@ -23,6 +24,8 @@ import { PAGES, EVENTS } from '../../config/AppConstants.js';
  */
 
 class HomePage {
+    static PAGE_ID = 'home';
+
     constructor() {
         this._container = null;
         this._keyHandler = this._onKeyDown.bind(this);
@@ -79,23 +82,23 @@ class HomePage {
 
     _cacheDom() {
         this._els = {
-            time:        this._container.querySelector('#topbar-time'),
-            date:        this._container.querySelector('#topbar-date'),
-            cardLive:    this._container.querySelector('#card-livetv'),
-            cardMovies:  this._container.querySelector('#card-movies'),
-            cardSeries:  this._container.querySelector('#card-series'),
-            liveCount:   this._container.querySelector('#card-livetv-count'),
+            time: this._container.querySelector('#topbar-time'),
+            date: this._container.querySelector('#topbar-date'),
+            cardLive: this._container.querySelector('#card-livetv'),
+            cardMovies: this._container.querySelector('#card-movies'),
+            cardSeries: this._container.querySelector('#card-series'),
+            liveCount: this._container.querySelector('#card-livetv-count'),
             moviesCount: this._container.querySelector('#card-movies-count'),
             seriesCount: this._container.querySelector('#card-series-count'),
-            toggleFav:   this._container.querySelector('#toggle-fav'),
+            toggleFav: this._container.querySelector('#toggle-fav'),
             recentTitle: this._container.querySelector('#recent-title'),
-            recentList:  this._container.querySelector('#recent-list'),
+            recentList: this._container.querySelector('#recent-list'),
             recentEmpty: this._container.querySelector('#recent-empty'),
             btnSettings: this._container.querySelector('#btn-settings'),
-            btnLogout:   this._container.querySelector('#btn-logout'),
-            expDate:     this._container.querySelector('#bottom-exp-date'),
-            expDays:     this._container.querySelector('#bottom-exp-days'),
-            expWrap:     this._container.querySelector('#bottom-exp'),
+            btnLogout: this._container.querySelector('#btn-logout'),
+            expDate: this._container.querySelector('#bottom-exp-date'),
+            expDays: this._container.querySelector('#bottom-exp-days'),
+            expWrap: this._container.querySelector('#bottom-exp'),
         };
     }
 
@@ -214,12 +217,12 @@ class HomePage {
         const focused = this._rows[this._focusRow]?.[this._focusCol];
         if (!focused) return;
 
-        if (focused === this._els.cardLive)    return this._navigate('livetv');
-        if (focused === this._els.cardMovies)  return this._navigate('movies');
-        if (focused === this._els.cardSeries)  return this._navigate('series');
-        if (focused === this._els.toggleFav)   return this._toggleFavourites();
+        if (focused === this._els.cardLive) return this._navigate('livetv');
+        if (focused === this._els.cardMovies) return this._navigate('movies');
+        if (focused === this._els.cardSeries) return this._navigate('series');
+        if (focused === this._els.toggleFav) return this._toggleFavourites();
         if (focused === this._els.btnSettings) return this._navigate('settings');
-        if (focused === this._els.btnLogout)   return this._handleLogout();
+        if (focused === this._els.btnLogout) return this._handleLogout();
 
         // Recent card
         if (focused.dataset.itemId) {
@@ -288,7 +291,7 @@ class HomePage {
      * Update category counts externally after data loads.
      */
     setCounts(live, movies, series) {
-        this._els.liveCount.textContent   = `${live} channel${live !== 1 ? 's' : ''}`;
+        this._els.liveCount.textContent = `${live} channel${live !== 1 ? 's' : ''}`;
         this._els.moviesCount.textContent = `${movies} movie${movies !== 1 ? 's' : ''}`;
         this._els.seriesCount.textContent = `${series} series`;
     }
@@ -296,10 +299,19 @@ class HomePage {
     // ─── Recent / Favourites ───────────────────────────────────
 
     _loadRecentItems() {
+        // ── Dummy data for testing (remove in production) ──
+        const DUMMY_RECENT = [
+            { id: 'd1', name: 'BBC World News', meta: 'News • International', type: 'live', thumbnail: '' },
+            { id: 'd2', name: 'Inception', meta: '2010 • Sci-Fi • Thriller', type: 'movie', thumbnail: '', progress: 65 },
+            { id: 'd3', name: 'Breaking Bad', meta: 'S03E07 • Drama', type: 'series', thumbnail: '', progress: 30 },
+            { id: 'd4', name: 'Al Jazeera', meta: 'News • Arabic', type: 'live', thumbnail: '', isFavourite: true },
+            { id: 'd5', name: 'The Dark Knight Rises — Extended Cut', meta: '2012 • Action', type: 'movie', thumbnail: '', progress: 90, isFavourite: true },
+        ];
+
         try {
             const raw = localStorage.getItem('iptv_recent');
-            this._recentItems = raw ? JSON.parse(raw) : [];
-        } catch { this._recentItems = []; }
+            this._recentItems = raw ? JSON.parse(raw) : DUMMY_RECENT;
+        } catch { this._recentItems = DUMMY_RECENT; }
 
         try {
             const raw = localStorage.getItem('iptv_favourites');
@@ -353,47 +365,9 @@ class HomePage {
     }
 
     _createRecentCard(item) {
-        const card = document.createElement('button');
-        card.className = 'recent-card focusable';
-        if (item.isFavourite) card.classList.add('recent-card--fav');
-        card.dataset.itemId = item.id || '';
-
-        const typeClass = item.type === 'live' ? 'live'
-            : item.type === 'movie' ? 'movie' : 'series';
-
-        card.innerHTML =
-            '<div class="recent-card__thumb">' +
-                (item.thumbnail
-                    ? '<img src="' + item.thumbnail + '" alt="" loading="lazy">'
-                    : '<div class="recent-card__thumb-placeholder">' +
-                        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
-                            'stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' +
-                            '<polygon points="5 3 19 12 5 21 5 3"/>' +
-                        '</svg>' +
-                      '</div>'
-                ) +
-                '<span class="recent-card__type-badge recent-card__type-badge--' + typeClass + '">' +
-                    (item.type || 'live') +
-                '</span>' +
-                '<div class="recent-card__fav">' +
-                    '<svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 ' +
-                    '0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 ' +
-                    '1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>' +
-                '</div>' +
-            '</div>' +
-            (item.progress !== undefined
-                ? '<div class="recent-card__progress">' +
-                    '<div class="recent-card__progress-bar" style="width:' + item.progress + '%"></div>' +
-                  '</div>'
-                : '') +
-            '<div class="recent-card__info">' +
-                '<span class="recent-card__name">' + this._escapeHtml(item.name || 'Untitled') + '</span>' +
-                '<span class="recent-card__meta">' + this._escapeHtml(item.meta || '') + '</span>' +
-            '</div>';
-
-        card.addEventListener('click', () => this._openRecentItem(item.id));
-
-        return card;
+        return RecentCard.create(item, {
+            onClick: (id) => this._openRecentItem(id),
+        });
     }
 
     // ─── Navigation Events ─────────────────────────────────────
@@ -439,13 +413,7 @@ class HomePage {
         if (this._showFavourites) this._renderList();
     }
 
-    // ─── Utilities ─────────────────────────────────────────────
 
-    _escapeHtml(str) {
-        const div = document.createElement('div');
-        div.textContent = str;
-        return div.innerHTML;
-    }
 }
 
 export default HomePage;
