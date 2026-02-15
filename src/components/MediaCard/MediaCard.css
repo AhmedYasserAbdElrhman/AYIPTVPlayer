@@ -1,0 +1,96 @@
+/* ─── Media Card — shared Movies & Series ────────────────────── */
+
+.mcard {
+    flex-shrink: 0;
+    background: #12121a;
+    border: 3px solid rgba(255, 255, 255, 0.04);
+    border-radius: 16px;
+    overflow: hidden;
+    cursor: pointer;
+    font-family: inherit;
+    color: inherit;
+    text-align: left;
+    padding: 0;
+    will-change: border-color;
+    transition: border-color 80ms ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.mcard.focused {
+    border-color: #6c5ce7;
+}
+
+/* ── Poster ── */
+
+.mcard__poster {
+    width: 100%;
+    aspect-ratio: 3/4;
+    background: #1a1a26;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mcard__poster-placeholder {
+    position: absolute;
+    color: #2a2a3a;
+    width: 48px;
+    height: 48px;
+}
+
+.mcard__poster-placeholder svg {
+    width: 48px;
+    height: 48px;
+}
+
+.mcard__poster-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity 200ms ease;
+}
+
+.mcard__poster-img--loaded {
+    opacity: 1;
+}
+
+/* ── Info ── */
+
+.mcard__info {
+    padding: 14px 16px 18px;
+}
+
+.mcard__name {
+    display: block;
+    font-size: 20px;
+    font-weight: 600;
+    color: #e8e8f0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+}
+
+.mcard__meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 6px;
+}
+
+.mcard__year {
+    font-size: 17px;
+    color: #6b6b80;
+}
+
+.mcard__rating {
+    font-size: 17px;
+    color: #f0c040;
+    font-weight: 500;
+}
