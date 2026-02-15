@@ -1,0 +1,132 @@
+/* ─── Series Detail — Season & Episode Selector ──────────────── */
+/* PERF: zero transitions, direct className swap for focus        */
+
+.series-detail__seasons {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+/* Season buttons — NO will-change, NO transition */
+.series-detail__season-btn {
+    padding: 12px 24px;
+    font-family: inherit;
+    font-size: 20px;
+    font-weight: 600;
+    color: #6b6b80;
+    background: #1a1a26;
+    border: 3px solid rgba(255, 255, 255, 0.04);
+    border-radius: 12px;
+    cursor: pointer;
+}
+
+.series-detail__season-btn.focused {
+    border-color: #6c5ce7;
+    color: #e8e8f0;
+}
+
+.series-detail__season-btn--active {
+    color: #e8e8f0;
+    background: rgba(108, 92, 231, 0.15);
+    border-color: rgba(108, 92, 231, 0.3);
+}
+
+/* ── Episode List ── */
+
+.series-detail__episodes {
+    flex: 1;
+    overflow-y: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    -webkit-overflow-scrolling: touch;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.series-detail__episodes::-webkit-scrollbar {
+    display: none;
+}
+
+/* Episode item — NO will-change, NO transition */
+.episode-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+    padding: 16px 20px;
+    font-family: inherit;
+    font-size: 20px;
+    color: #8b8ba0;
+    background: #1a1a26;
+    border: 3px solid rgba(255, 255, 255, 0.04);
+    border-radius: 12px;
+    cursor: pointer;
+    text-align: left;
+}
+
+.episode-item.focused {
+    border-color: #6c5ce7;
+    color: #e8e8f0;
+}
+
+.episode-item__num {
+    font-size: 18px;
+    font-weight: 700;
+    color: #4a4a5e;
+    min-width: 44px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.episode-item.focused .episode-item__num {
+    color: #6c5ce7;
+}
+
+.episode-item__body {
+    flex: 1;
+    min-width: 0;
+}
+
+.episode-item__title {
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+}
+
+.episode-item__duration {
+    font-size: 17px;
+    color: #4a4a5e;
+    margin-top: 2px;
+}
+
+.episode-item__play {
+    width: 28px;
+    height: 28px;
+    color: #4a4a5e;
+    flex-shrink: 0;
+}
+
+.episode-item.focused .episode-item__play {
+    color: #6c5ce7;
+}
+
+.episode-item__play svg {
+    width: 28px;
+    height: 28px;
+}
+
+/* ─── Series Detail Card — wider for episode list ── */
+
+.series-detail .media-detail__card {
+    width: 1200px;
+    max-height: 860px;
+}
+
+.series-detail .media-detail__info {
+    padding: 32px 36px;
+    gap: 12px;
+}
