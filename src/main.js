@@ -154,7 +154,7 @@ class App {
                 // Empty history - check if on home page, if so trigger exit
                 console.log('[App] History empty');
                 // Check if current page is HomePage
-                if (this._currentPage && this._currentPage.constructor.name === 'HomePage') {
+                if (this._currentPage && this._currentPage.constructor.PAGE_ID === 'home') {
                     console.log('[App] On home page, triggering exit');
                     if (window.webOS && window.webOS.platformBack) {
                         window.webOS.platformBack();
