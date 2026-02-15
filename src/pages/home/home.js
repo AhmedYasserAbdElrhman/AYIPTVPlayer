@@ -1,6 +1,7 @@
 import TemplateEngine from '../../utils/templateEngine.js';
 import { mapRemoteEvent } from '../../input/RemoteKeyMapper.js';
 import { RemoteActions } from '../../input/RemoteActions.js';
+import { PAGES, EVENTS } from '../../config/AppConstants.js';
 
 /**
  * Home page controller — Smart TV remote optimised.
@@ -178,8 +179,7 @@ class HomePage {
             return;
         }
 
-        // BACK: let the platform handle navigation / exit, but if needed
-        // we could intercept RemoteActions.BACK here in future.
+        // BACK: WebOS intercepted via WebOSBackHandler, no need to handle here
     }
 
     // ─── Focus — performance-optimised ─────────────────────────
@@ -400,7 +400,7 @@ class HomePage {
 
     _navigate(target) {
         this._container.dispatchEvent(
-            new CustomEvent('home:navigate', {
+            new CustomEvent(EVENTS.HOME_NAVIGATE, {
                 detail: { target },
                 bubbles: true,
             })
@@ -409,14 +409,14 @@ class HomePage {
 
     _handleLogout() {
         this._container.dispatchEvent(
-            new CustomEvent('home:logout', { bubbles: true })
+            new CustomEvent(EVENTS.HOME_LOGOUT, { bubbles: true })
         );
     }
 
     _openRecentItem(itemId) {
         if (!itemId) return;
         this._container.dispatchEvent(
-            new CustomEvent('home:open', {
+            new CustomEvent(EVENTS.HOME_OPEN_ITEM, {
                 detail: { itemId },
                 bubbles: true,
             })
