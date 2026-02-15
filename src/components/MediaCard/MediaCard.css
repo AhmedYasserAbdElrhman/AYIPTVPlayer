@@ -1,6 +1,7 @@
 /* ─── Media Card — shared Movies & Series ────────────────────── */
 
 .mcard {
+    width: 230px;
     flex-shrink: 0;
     background: #12121a;
     border: 3px solid rgba(255, 255, 255, 0.04);
@@ -25,7 +26,7 @@
 
 .mcard__poster {
     width: 100%;
-    aspect-ratio: 3/4;
+    height: 300px;
     background: #1a1a26;
     position: relative;
     overflow: hidden;
