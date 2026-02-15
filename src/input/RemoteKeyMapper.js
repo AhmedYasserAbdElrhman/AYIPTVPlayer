@@ -26,6 +26,13 @@ export function mapRemoteEvent(e) {
         case 'Enter':
         case 'OK':
             return RemoteActions.OK;
+        // Channel up/down — WebOS sends ChannelUp/ChannelDown
+        case 'ChannelUp':
+        case 'PageUp':
+            return RemoteActions.CHANNEL_UP;
+        case 'ChannelDown':
+        case 'PageDown':
+            return RemoteActions.CHANNEL_DOWN;
         // Colour keys — names are browser / platform dependent
         case 'Red':
             return RemoteActions.RED;
