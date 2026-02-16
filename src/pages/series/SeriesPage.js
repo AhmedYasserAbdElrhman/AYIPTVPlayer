@@ -281,7 +281,7 @@ class SeriesPage {
             this._gridRow = Math.floor(index / GRID_COLUMNS);
             this._gridCol = index % GRID_COLUMNS;
             this._setFocus(3);
-            this._openDetail(item);
+            this._showDetail(item);
         });
         return el;
     }

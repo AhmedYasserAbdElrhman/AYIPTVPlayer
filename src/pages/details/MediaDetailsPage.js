@@ -193,6 +193,8 @@ class MediaDetailsPage {
         const ext = merged.container_extension || item.container_extension || 'mp4';
         const url = VodService.getStreamUrl(item.stream_id || item.id, ext);
 
+        console.log('[MediaDetailsPage] _playMovie called!', { url, ext, id: item.stream_id || item.id });
+
         this._container.dispatchEvent(
             new CustomEvent(EVENTS.PLAY_REQUEST, {
                 detail: {

@@ -91,7 +91,7 @@ class Router {
         const base = Settings.getBaseUrl();
         const { username, password } = Settings.credentials;
 
-        if (!StreamType[type]) {
+        if (!Object.values(StreamType).includes(type)) {
             throw new Error(`Invalid stream type: ${type}`);
         }
 

@@ -19,6 +19,7 @@ function inlineTemplates() {
             function scan(dir, prefix = '') {
                 const entries = readdirSync(dir);
                 for (const entry of entries) {
+                    if (entry.startsWith('.')) continue;
                     const fullPath = join(dir, entry);
                     const relativePath = prefix ? `${prefix}/${entry}` : entry;
                     if (statSync(fullPath).isDirectory()) {
