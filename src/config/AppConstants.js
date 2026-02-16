@@ -10,6 +10,7 @@ export const PAGES = {
     LIVETV: 'livetv',
     MOVIES: 'movies',
     SERIES: 'series',
+    DETAILS: 'details',
     PLAYER: 'player',
 };
 
@@ -22,6 +23,7 @@ export const EVENTS = {
     // Navigation events
     HOME_NAVIGATE: 'home:navigate',
     HOME_OPEN_ITEM: 'home:open',
+    SHOW_DETAILS: 'show:details',
     PLAY_REQUEST: 'play:request',
 
     // Player events
