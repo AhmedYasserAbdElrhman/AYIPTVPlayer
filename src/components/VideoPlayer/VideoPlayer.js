@@ -347,8 +347,10 @@ class VideoPlayer {
         if (code === 3) msg = 'Decode error';
         if (code === 4) msg = 'Source not supported';
 
-        // Retry if attempts remain
-        if (this._retryCount < MAX_RETRIES && this._currentInfo) {
+        // Only retry on recoverable errors (network = code 2, unknown = code 1)
+        const isRecoverable = !code || code <= 2;
+
+        if (isRecoverable && this._retryCount < MAX_RETRIES && this._currentInfo) {
             this._retryCount++;
             console.log(`[VideoPlayer] Retry ${this._retryCount}/${MAX_RETRIES} — ${msg}`);
 
@@ -367,7 +369,8 @@ class VideoPlayer {
             return;
         }
 
-        // All retries exhausted — show final error
+        // Non-recoverable or retries exhausted — show final error
+        console.warn(`[VideoPlayer] Playback failed: ${msg} (code ${code})`);
         this._els.errorText.textContent = msg;
         this._els.errorWrap.style.display = 'flex';
         this._dispatchEvent('player:error', { code, message: msg });
