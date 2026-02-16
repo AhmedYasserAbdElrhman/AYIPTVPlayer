@@ -4,9 +4,9 @@ import './pages/login/login.css';
 import './pages/home/home.css';
 import './pages/livetv/livetv.css';
 import './pages/movies/media.css';
-import './pages/series/series-extra.css';
 import './components/VideoPlayer/VideoPlayer.css';
 import './components/MediaCard/MediaCard.css';
+import './pages/details/details.css';
 import './pages/player/player.css';
 
 import LoginPage from './pages/login/login.js';
@@ -15,6 +15,7 @@ import XtreamAuth from './api/XtreamAuth.js';
 import LiveTVPage from './pages/livetv/LiveTVPage.js';
 import MoviesPage from './pages/movies/MoviesPage.js';
 import SeriesPage from './pages/series/SeriesPage.js';
+import MediaDetailsPage from './pages/details/MediaDetailsPage.js';
 import PlayerPage from './pages/player/PlayerPage.js';
 import TemplateEngine from './utils/templateEngine.js';
 import templates from 'virtual:templates';
@@ -87,6 +88,13 @@ class App {
         if (!skipPush) WebOSBackHandler.pushPageState(PAGES.SERIES);
     }
 
+    async _showDetails(itemInfo, skipPush) {
+        this._destroyCurrent();
+        this._currentPage = new MediaDetailsPage();
+        await this._currentPage.mount(this._container, itemInfo);
+        if (!skipPush) WebOSBackHandler.pushPageState(PAGES.DETAILS, { itemInfo });
+    }
+
     async _showPlayer(streamInfo) {
         this._destroyCurrent();
         this._currentPage = new PlayerPage();
@@ -123,6 +131,11 @@ class App {
             // TODO: Handle opening a recent/favourite item
         });
 
+        // Listen for detail page requests
+        this._container.addEventListener(EVENTS.SHOW_DETAILS, (e) => {
+            this._showDetails(e.detail);
+        });
+
         // Any page can request playback — navigate to PlayerPage
         this._container.addEventListener(EVENTS.PLAY_REQUEST, (e) => {
             this._showPlayer(e.detail);
@@ -157,6 +170,13 @@ class App {
                         break;
                     case PAGES.SERIES:
                         this._showSeries(true);
+                        break;
+                    case PAGES.DETAILS:
+                        if (state.itemInfo) {
+                            this._showDetails(state.itemInfo, true);
+                        } else {
+                            window.history.back();
+                        }
                         break;
                     case PAGES.LOGIN:
                         this._showLogin(true);

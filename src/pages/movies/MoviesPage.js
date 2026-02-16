@@ -108,7 +108,6 @@ class MoviesPage {
         clearTimeout(this._searchTid);
         if (this._vlist) { this._vlist.destroy(); this._vlist = null; }
         if (this._imgObs) { this._imgObs.disconnect(); this._imgObs = null; }
-        this._closeDetail();
         if (this._container) this._container.innerHTML = '';
         this._catEls = this._visCatEls = [];
         this._byCat.clear();
@@ -366,107 +365,12 @@ class MoviesPage {
         this._renderGrid();
     }
 
-    /* ═══════════════ DETAIL MODAL ═══════════════ */
+    /* ═══════════════ DETAIL NAVIGATION ═══════════════ */
 
-    async _openDetail(item) {
-        if (this._detailOpen) this._closeDetail();
-
-        this._detailOpen = true;
-        this._detailItem = item;
-        this._detailIdx = 0;
-
-        let info = item;
-        try {
-            const full = await VodService.getInfo(item.stream_id || item.id);
-            if (full && full.info) info = { ...item, ...full.info, movie_data: full.movie_data };
-        } catch { /* use basic */ }
-
-        if (this._isDestroyed || !this._detailOpen) return;
-
-        const overlay = document.createElement('div');
-        overlay.className = 'media-detail';
-
-        const cover = info.cover || info.stream_icon || item.cover || item.stream_icon || '';
-        const name = info.name || item.name || 'Untitled';
-        const year = info.year || info.releasedate || '';
-        const rating = info.rating || '';
-        const genre = info.genre || '';
-        const plot = info.plot || info.description || '';
-        const duration = info.duration || '';
-
-        overlay.innerHTML =
-            '<div class="media-detail__card">' +
-            '<div class="media-detail__poster">' +
-            (cover ? '<img src="' + _escapeAttr(cover) + '" alt="">' : '') +
-            '</div>' +
-            '<div class="media-detail__info">' +
-            '<h2 class="media-detail__title">' + _escapeHtml(name) + '</h2>' +
-            '<div class="media-detail__meta">' +
-            (year ? '<span>' + _escapeHtml(String(year)) + '</span>' : '') +
-            (duration ? '<span>' + _escapeHtml(duration) + '</span>' : '') +
-            (genre ? '<span>' + _escapeHtml(genre) + '</span>' : '') +
-            (rating ? '<span class="media-detail__rating">★ ' + _escapeHtml(String(rating)) + '</span>' : '') +
-            '</div>' +
-            (plot ? '<p class="media-detail__plot">' + _escapeHtml(plot) + '</p>' : '') +
-            '<div class="media-detail__actions">' +
-            '<button class="media-detail__btn" id="detail-play">' +
-            '<svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21"/></svg>' +
-            'Play' +
-            '</button>' +
-            '<button class="media-detail__btn media-detail__btn--secondary" id="detail-close">Close</button>' +
-            '</div>' +
-            '</div>' +
-            '</div>';
-
-        this._container.appendChild(overlay);
-        this._detailEl = overlay;
-        this._detailBtns = [
-            overlay.querySelector('#detail-play'),
-            overlay.querySelector('#detail-close'),
-        ];
-        this._detailBtns[0].addEventListener('click', () => this._playItem(item));
-        this._detailBtns[1].addEventListener('click', () => this._closeDetail());
-
-        this._region = 4;
-        this._detailIdx = 0;
-        this._setDetailFocus(0);
-    }
-
-    _closeDetail() {
-        if (this._detailEl) { this._detailEl.remove(); this._detailEl = null; }
-        this._detailOpen = false;
-        this._detailItem = null;
-        this._detailBtns = [];
-        this._region = 3;
-        this._setFocus(3);
-    }
-
-    _setDetailFocus(index) {
-        if (this._prev) {
-            const c = this._prev.className;
-            if (c.includes(' focused')) this._prev.className = c.replace(' focused', '');
-        }
-        this._detailIdx = index;
-        const target = this._detailBtns[index];
-        if (target) {
-            target.className += ' focused';
-            this._prev = target;
-        }
-    }
-
-    /* ═══════════════ PLAYBACK ═══════════════ */
-
-    _playItem(item) {
-        this._closeDetail();
-        const ext = item.container_extension || 'mp4';
-        const url = VodService.getStreamUrl(item.stream_id || item.id, ext);
+    _showDetail(item) {
         this._container.dispatchEvent(
-            new CustomEvent(EVENTS.PLAY_REQUEST, {
-                detail: {
-                    url,
-                    title: item.name || 'Movie',
-                    subtitle: item.year ? String(item.year) : '',
-                },
+            new CustomEvent(EVENTS.SHOW_DETAILS, {
+                detail: { item, type: 'movie' },
                 bubbles: true,
             })
         );
@@ -499,8 +403,7 @@ class MoviesPage {
 
         switch (action) {
             case RemoteActions.BACK:
-                if (this._detailOpen) this._closeDetail();
-                else this._goBack();
+                this._goBack();
                 break;
             case RemoteActions.OK: this._enter(); break;
             case RemoteActions.UP: this._up(); break;
@@ -519,7 +422,6 @@ class MoviesPage {
     /* ═══════════════ NAVIGATION ═══════════════ */
 
     _up() {
-        if (this._region === 4) return;
         if (this._region === 2) {
             if (this._sidebarIdx > 0) this._setFocus(2, this._sidebarIdx - 1);
             else if (this._els.search) this._setFocus(1, 0);
@@ -535,7 +437,6 @@ class MoviesPage {
     }
 
     _down() {
-        if (this._region === 4) return;
         if (this._region === 0) this._setFocus(2, this._sidebarIdx);
         else if (this._region === 1) {
             if (this._els.search) this._els.search.blur();
@@ -554,10 +455,6 @@ class MoviesPage {
     }
 
     _right() {
-        if (this._region === 4) {
-            if (this._detailIdx + 1 < this._detailBtns.length) this._setDetailFocus(this._detailIdx + 1);
-            return;
-        }
         if (this._region === 0 || this._region === 1 || this._region === 2) {
             if (this._viewItems.length > 0) this._setFocus(3);
         } else if (this._region === 3) {
@@ -567,10 +464,6 @@ class MoviesPage {
     }
 
     _left() {
-        if (this._region === 4) {
-            if (this._detailIdx > 0) this._setDetailFocus(this._detailIdx - 1);
-            return;
-        }
         if (this._region === 3) {
             if (this._gridCol > 0) { this._gridCol--; this._setFocus(3); }
             else this._setFocus(2, this._sidebarIdx);
@@ -587,10 +480,7 @@ class MoviesPage {
         } else if (this._region === 3) {
             const idx = this._gridRow * GRID_COLUMNS + this._gridCol;
             const item = this._viewItems[idx];
-            if (item) this._openDetail(item);
-        } else if (this._region === 4) {
-            if (this._detailIdx === 0) this._playItem(this._detailItem);
-            else this._closeDetail();
+            if (item) this._showDetail(item);
         }
     }
 

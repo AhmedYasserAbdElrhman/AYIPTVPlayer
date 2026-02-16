@@ -111,7 +111,6 @@ class SeriesPage {
         clearTimeout(this._searchTid);
         if (this._vlist) { this._vlist.destroy(); this._vlist = null; }
         if (this._imgObs) { this._imgObs.disconnect(); this._imgObs = null; }
-        this._closeDetail();
         if (this._container) this._container.innerHTML = '';
         this._catEls = this._visCatEls = [];
         this._byCat.clear();
@@ -336,189 +335,12 @@ class SeriesPage {
         this._renderGrid();
     }
 
-    /* ═══════════════ DETAIL MODAL (Series: seasons + episodes) ═══════════════ */
+    /* ═══════════════ DETAIL NAVIGATION ═══════════════ */
 
-    async _openDetail(item) {
-        if (this._detailOpen) this._closeDetail();
-        this._detailOpen = true;
-        this._detailItem = item;
-        this._seasonIdx = 0;
-        this._episodeIdx = 0;
-        this._detailRegion = 'seasons';
-
-        let info = null;
-        try { info = await SeriesService.getInfo(item.series_id || item.id); } catch { info = null; }
-        if (this._isDestroyed || !this._detailOpen) return;
-
-        this._seriesInfo = info;
-        const episodes = info?.episodes || {};
-        this._seasonKeys = Object.keys(episodes).sort((a, b) => Number(a) - Number(b));
-        this._activeSeason = this._seasonKeys[0] || null;
-
-        const overlay = document.createElement('div');
-        overlay.className = 'media-detail series-detail';
-
-        const si = info?.info || item;
-        const cover = si.cover || item.cover || '';
-        const name = si.name || item.name || 'Untitled';
-        const year = si.year || si.releaseDate || '';
-        const rating = si.rating || '';
-        const genre = si.genre || '';
-        const plot = si.plot || '';
-
-        overlay.innerHTML =
-            '<div class="media-detail__card">' +
-            '<div class="media-detail__poster">' +
-            (cover ? '<img src="' + _escapeAttr(cover) + '" alt="">' : '') +
-            '</div>' +
-            '<div class="media-detail__info">' +
-            '<h2 class="media-detail__title">' + _escapeHtml(name) + '</h2>' +
-            '<div class="media-detail__meta">' +
-            (year ? '<span>' + _escapeHtml(String(year)) + '</span>' : '') +
-            (genre ? '<span>' + _escapeHtml(genre) + '</span>' : '') +
-            (rating ? '<span class="media-detail__rating">★ ' + _escapeHtml(String(rating)) + '</span>' : '') +
-            '</div>' +
-            (plot ? '<p class="media-detail__plot">' + _escapeHtml(plot) + '</p>' : '') +
-            '<div class="series-detail__seasons" id="detail-seasons"></div>' +
-            '<div class="series-detail__episodes" id="detail-episodes"></div>' +
-            '<div class="media-detail__actions">' +
-            '<button class="media-detail__btn media-detail__btn--secondary" id="detail-close">Close</button>' +
-            '</div>' +
-            '</div>' +
-            '</div>';
-
-        this._container.appendChild(overlay);
-        this._detailEl = overlay;
-        this._closeBtn = overlay.querySelector('#detail-close');
-        this._closeBtn.addEventListener('click', () => this._closeDetail());
-
-        this._renderSeasonTabs();
-        this._renderEpisodes();
-
-        this._region = 4;
-        this._detailRegion = 'seasons';
-        this._setDetailFocus();
-    }
-
-    _renderSeasonTabs() {
-        const container = this._detailEl.querySelector('#detail-seasons');
-        container.textContent = '';
-        this._seasonBtns = [];
-
-        for (let i = 0, n = this._seasonKeys.length; i < n; i++) {
-            const key = this._seasonKeys[i];
-            const btn = document.createElement('button');
-            btn.className = key === this._activeSeason
-                ? 'series-detail__season-btn series-detail__season-btn--active'
-                : 'series-detail__season-btn';
-            btn.textContent = 'Season ' + key;
-            btn.dataset.season = key;
-
-            btn.addEventListener('click', () => {
-                this._seasonIdx = i;
-                this._switchSeason(key);
-            });
-
-            container.appendChild(btn);
-            this._seasonBtns.push(btn);
-        }
-    }
-
-    _renderEpisodes() {
-        const container = this._detailEl.querySelector('#detail-episodes');
-        container.textContent = '';
-        this._episodeEls = [];
-
-        if (!this._seriesInfo?.episodes || !this._activeSeason) return;
-        const episodes = this._seriesInfo.episodes[this._activeSeason] || [];
-
-        for (let i = 0, n = episodes.length; i < n; i++) {
-            const ep = episodes[i];
-            const el = document.createElement('button');
-            el.className = 'episode-item';
-            el.dataset.idx = i;
-
-            const num = ep.episode_num || ep.sort || '';
-            const title = ep.title || ep.name || 'Episode ' + num;
-            const duration = ep.info?.duration || '';
-
-            // Use createElement instead of innerHTML
-            const numSpan = document.createElement('span');
-            numSpan.className = 'episode-item__num';
-            numSpan.textContent = num;
-
-            const body = document.createElement('div');
-            body.className = 'episode-item__body';
-            const titleSpan = document.createElement('span');
-            titleSpan.className = 'episode-item__title';
-            titleSpan.textContent = title;
-            body.appendChild(titleSpan);
-            if (duration) {
-                const durSpan = document.createElement('span');
-                durSpan.className = 'episode-item__duration';
-                durSpan.textContent = duration;
-                body.appendChild(durSpan);
-            }
-
-            const playIcon = document.createElement('div');
-            playIcon.className = 'episode-item__play';
-            playIcon.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21"/></svg>';
-
-            el.appendChild(numSpan);
-            el.appendChild(body);
-            el.appendChild(playIcon);
-
-            el.addEventListener('click', () => {
-                this._episodeIdx = i;
-                this._playEpisode(ep);
-            });
-
-            container.appendChild(el);
-            this._episodeEls.push(el);
-        }
-    }
-
-    _switchSeason(key) {
-        this._activeSeason = key;
-        for (let i = 0, n = this._seasonBtns.length; i < n; i++) {
-            this._seasonBtns[i].className = this._seasonBtns[i].dataset.season === key
-                ? 'series-detail__season-btn series-detail__season-btn--active'
-                : 'series-detail__season-btn';
-        }
-        if (this._detailRegion === 'seasons' && this._seasonBtns[this._seasonIdx]) {
-            this._seasonBtns[this._seasonIdx].className += ' focused';
-        }
-        this._episodeIdx = 0;
-        this._renderEpisodes();
-    }
-
-    _closeDetail() {
-        if (this._detailEl) { this._detailEl.remove(); this._detailEl = null; }
-        this._detailOpen = false;
-        this._detailItem = null;
-        this._seriesInfo = null;
-        this._seasonBtns = [];
-        this._episodeEls = [];
-        this._closeBtn = null;
-        this._region = 3;
-        this._setFocus(3);
-    }
-
-    /* ═══════════════ PLAYBACK ═══════════════ */
-
-    _playEpisode(episode) {
-        const ext = episode.container_extension || 'mp4';
-        const url = SeriesService.getEpisodeUrl(episode.id, ext);
-        const seriesName = this._detailItem?.name || 'Series';
-        const epTitle = episode.title || episode.name || 'Episode ' + (episode.episode_num || '');
-
+    _showDetail(item) {
         this._container.dispatchEvent(
-            new CustomEvent(EVENTS.PLAY_REQUEST, {
-                detail: {
-                    url,
-                    title: seriesName,
-                    subtitle: 'S' + this._activeSeason + ' · ' + epTitle,
-                },
+            new CustomEvent(EVENTS.SHOW_DETAILS, {
+                detail: { item, type: 'series' },
                 bubbles: true,
             })
         );
@@ -541,8 +363,7 @@ class SeriesPage {
 
         switch (action) {
             case RemoteActions.BACK:
-                if (this._detailOpen) this._closeDetail();
-                else this._goBack();
+                this._goBack();
                 break;
             case RemoteActions.OK: this._enter(); break;
             case RemoteActions.UP: this._up(); break;
@@ -561,7 +382,6 @@ class SeriesPage {
     /* ═══════════════ NAVIGATION ═══════════════ */
 
     _up() {
-        if (this._region === 4) { this._upInDetail(); return; }
         if (this._region === 2) {
             if (this._sidebarIdx > 0) this._setFocus(2, this._sidebarIdx - 1);
             else if (this._els.search) this._setFocus(1, 0);
@@ -573,7 +393,6 @@ class SeriesPage {
     }
 
     _down() {
-        if (this._region === 4) { this._downInDetail(); return; }
         if (this._region === 0) this._setFocus(2, this._sidebarIdx);
         else if (this._region === 1) { if (this._els.search) this._els.search.blur(); this._setFocus(2, 0); }
         else if (this._region === 2) {
@@ -590,7 +409,6 @@ class SeriesPage {
     }
 
     _right() {
-        if (this._region === 4) { this._rightInDetail(); return; }
         if (this._region === 0 || this._region === 1 || this._region === 2) {
             if (this._viewItems.length > 0) this._setFocus(3);
         } else if (this._region === 3) {
@@ -600,7 +418,6 @@ class SeriesPage {
     }
 
     _left() {
-        if (this._region === 4) { this._leftInDetail(); return; }
         if (this._region === 3) {
             if (this._gridCol > 0) { this._gridCol--; this._setFocus(3); }
             else this._setFocus(2, this._sidebarIdx);
@@ -615,59 +432,7 @@ class SeriesPage {
             if (el) this._selectCategory(el.dataset.catId);
         } else if (this._region === 3) {
             const idx = this._gridRow * GRID_COLUMNS + this._gridCol;
-            if (this._viewItems[idx]) this._openDetail(this._viewItems[idx]);
-        } else if (this._region === 4) {
-            this._enterInDetail();
-        }
-    }
-
-    /* Detail sub-navigation */
-
-    _downInDetail() {
-        if (this._detailRegion === 'seasons') {
-            if (this._episodeEls.length) { this._detailRegion = 'episodes'; this._episodeIdx = 0; }
-            else { this._detailRegion = 'close'; }
-            this._setDetailFocus();
-        } else if (this._detailRegion === 'episodes') {
-            if (this._episodeIdx + 1 < this._episodeEls.length) { this._episodeIdx++; this._setDetailFocus(); }
-            else { this._detailRegion = 'close'; this._setDetailFocus(); }
-        }
-    }
-
-    _upInDetail() {
-        if (this._detailRegion === 'close') {
-            if (this._episodeEls.length) { this._detailRegion = 'episodes'; this._episodeIdx = this._episodeEls.length - 1; }
-            else if (this._seasonBtns.length) { this._detailRegion = 'seasons'; }
-            this._setDetailFocus();
-        } else if (this._detailRegion === 'episodes') {
-            if (this._episodeIdx > 0) { this._episodeIdx--; this._setDetailFocus(); }
-            else { this._detailRegion = 'seasons'; this._setDetailFocus(); }
-        }
-    }
-
-    _rightInDetail() {
-        if (this._detailRegion === 'seasons' && this._seasonIdx + 1 < this._seasonBtns.length) {
-            this._seasonIdx++;
-            this._setDetailFocus();
-        }
-    }
-
-    _leftInDetail() {
-        if (this._detailRegion === 'seasons' && this._seasonIdx > 0) {
-            this._seasonIdx--;
-            this._setDetailFocus();
-        }
-    }
-
-    _enterInDetail() {
-        if (this._detailRegion === 'seasons') {
-            const key = this._seasonKeys[this._seasonIdx];
-            if (key) this._switchSeason(key);
-        } else if (this._detailRegion === 'episodes') {
-            const eps = this._seriesInfo?.episodes?.[this._activeSeason] || [];
-            if (eps[this._episodeIdx]) this._playEpisode(eps[this._episodeIdx]);
-        } else if (this._detailRegion === 'close') {
-            this._closeDetail();
+            if (this._viewItems[idx]) this._showDetail(this._viewItems[idx]);
         }
     }
 
@@ -700,33 +465,6 @@ class SeriesPage {
         if (target) {
             target.className += ' focused';
             if (region === 2) this._scrollCat(target);
-            this._prev = target;
-        }
-    }
-
-    _setDetailFocus() {
-        if (this._prev) {
-            const c = this._prev.className;
-            if (c.includes(' focused')) this._prev.className = c.replace(' focused', '');
-        }
-
-        let target = null;
-        if (this._detailRegion === 'seasons') target = this._seasonBtns[this._seasonIdx];
-        else if (this._detailRegion === 'episodes') target = this._episodeEls[this._episodeIdx];
-        else if (this._detailRegion === 'close') target = this._closeBtn;
-
-        if (target) {
-            target.className += ' focused';
-            // Manual scroll for episode list
-            if (this._detailRegion === 'episodes') {
-                const box = this._detailEl?.querySelector('#detail-episodes');
-                if (box) {
-                    const bt = box.getBoundingClientRect();
-                    const et = target.getBoundingClientRect();
-                    if (et.top < bt.top + 4) box.scrollTop -= (bt.top - et.top + 12);
-                    else if (et.bottom > bt.bottom - 4) box.scrollTop += (et.bottom - bt.bottom + 12);
-                }
-            }
             this._prev = target;
         }
     }
