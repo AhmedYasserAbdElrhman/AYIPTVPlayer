@@ -5,6 +5,7 @@ import VodService from '../../api/VodService.js';
 import MediaCard from '../../components/MediaCard/MediaCard.js';
 import VirtualList from '../../components/VirtualList/VirtualList.js';
 import { EVENTS } from '../../config/AppConstants.js';
+import ImageCache from '../../utils/ImageCache.js';
 
 /**
  * Movies Page — LG WebOS optimised
@@ -142,7 +143,7 @@ class MoviesPage {
                     const img = e.target;
                     const src = img.dataset.src;
                     if (src) {
-                        img.src = src;
+                        ImageCache.load(src, img);
                         img.removeAttribute('data-src');
                     }
                     this._imgObs.unobserve(img);
@@ -291,14 +292,10 @@ class MoviesPage {
         const card = MediaCard.create(item, 'movie');
         const el = card.el;
 
-        // Lazy-load poster image: find img, swap src → data-src
-        const img = el.querySelector('img');
-        if (img && img.src) {
-            img.dataset.src = img.src;
-            img.removeAttribute('src');
-            img.decoding = 'async';
-            img.onerror = function () { this.style.display = 'none'; };
-            if (this._imgObs) this._imgObs.observe(img);
+        // Observe image for lazy loading via ImageCache
+        const img = el.querySelector('.mcard__poster-img');
+        if (img && this._imgObs) {
+            this._imgObs.observe(img);
         }
 
         el.addEventListener('click', () => {

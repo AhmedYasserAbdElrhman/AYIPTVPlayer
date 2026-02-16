@@ -5,6 +5,7 @@ import SeriesService from '../../api/SeriesService.js';
 import MediaCard from '../../components/MediaCard/MediaCard.js';
 import VirtualList from '../../components/VirtualList/VirtualList.js';
 import { EVENTS } from '../../config/AppConstants.js';
+import ImageCache from '../../utils/ImageCache.js';
 
 /**
  * Series Page — LG WebOS optimised
@@ -141,7 +142,10 @@ class SeriesPage {
                 const e = entries[i];
                 if (e.isIntersecting) {
                     const img = e.target;
-                    if (img.dataset.src) { img.src = img.dataset.src; img.removeAttribute('data-src'); }
+                    if (img.dataset.src) {
+                        ImageCache.load(img.dataset.src, img);
+                        img.removeAttribute('data-src');
+                    }
                     this._imgObs.unobserve(img);
                 }
             }
@@ -268,13 +272,10 @@ class SeriesPage {
         const card = MediaCard.create(item, 'series');
         const el = card.el;
 
-        const img = el.querySelector('img');
-        if (img && img.src) {
-            img.dataset.src = img.src;
-            img.removeAttribute('src');
-            img.decoding = 'async';
-            img.onerror = function () { this.style.display = 'none'; };
-            if (this._imgObs) this._imgObs.observe(img);
+        // Observe image for lazy loading via ImageCache
+        const img = el.querySelector('.mcard__poster-img');
+        if (img && this._imgObs) {
+            this._imgObs.observe(img);
         }
 
         el.addEventListener('click', () => {

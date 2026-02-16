@@ -3,6 +3,7 @@ import { mapRemoteEvent } from '../../input/RemoteKeyMapper.js';
 import { RemoteActions } from '../../input/RemoteActions.js';
 import LiveService from '../../api/LiveService.js';
 import VideoPlayer from '../../components/VideoPlayer/VideoPlayer.js';
+import ImageCache from '../../utils/ImageCache.js';
 import VirtualList from '../../components/VirtualList/VirtualList.js';
 import { EVENTS } from '../../config/AppConstants.js';
 
@@ -151,7 +152,7 @@ class LiveTVPage {
                     const img = e.target;
                     const src = img.dataset.src;
                     if (src) {
-                        img.src = src;
+                        ImageCache.load(src, img);
                         img.removeAttribute('data-src');
                     }
                     this._imgObs.unobserve(img);
