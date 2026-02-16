@@ -20,26 +20,32 @@ import { RemoteActions } from '../../input/RemoteActions.js';
 
 // ─── Constants ───────────────────────────────────────────────
 const OVERLAY_TIMEOUT = 4000;
-const SEEK_STEP       = 10;   // seconds
-const SEEK_FAST_STEP  = 30;   // seconds (long-press style)
+const SEEK_STEP = 10;   // seconds
+const SEEK_FAST_STEP = 30;   // seconds (long-press style)
+const MAX_RETRIES = 5;
+const RETRY_DELAY = 2000; // ms between retries
 
 class VideoPlayer {
     constructor() {
-        this._container   = null;
-        this._els         = {};
-        this._keyHandler  = this._onKeyDown.bind(this);
+        this._container = null;
+        this._els = {};
+        this._keyHandler = this._onKeyDown.bind(this);
         this._overlayTimer = null;
-        this._rafId       = null;
-        this._isPlaying   = false;
+        this._rafId = null;
+        this._isPlaying = false;
         this._isFullscreen = false;
-        this._isMounted   = false;
+        this._isMounted = false;
         this._currentInfo = null;
 
+        // Retry state
+        this._retryCount = 0;
+        this._retryTimer = null;
+
         // Bind event callbacks once to avoid GC churn
-        this._onPlay      = () => this._syncPlayState(true);
-        this._onPause     = () => this._syncPlayState(false);
-        this._onEnded     = () => this._handleEnded();
-        this._onError     = (e) => this._handleError(e);
+        this._onPlay = () => this._syncPlayState(true);
+        this._onPause = () => this._syncPlayState(false);
+        this._onEnded = () => this._handleEnded();
+        this._onError = (e) => this._handleError(e);
         this._onTimeUpdate = () => this._updateProgress();
         this._onLoadedMeta = () => this._onMetadataReady();
     }
@@ -62,6 +68,7 @@ class VideoPlayer {
         this._unbindVideoEvents();
         this._stopProgressLoop();
         clearTimeout(this._overlayTimer);
+        clearTimeout(this._retryTimer);
 
         if (this._els.video) {
             this._els.video.pause();
@@ -86,14 +93,19 @@ class VideoPlayer {
         if (!this._isMounted) return;
 
         this._currentInfo = info;
+        this._retryCount = 0;
+        clearTimeout(this._retryTimer);
         const video = this._els.video;
+
+        // Hide any previous error
+        this._els.errorWrap.style.display = 'none';
 
         // Set source
         video.src = info.url;
         video.load();
 
         // Update overlay text
-        this._els.title.textContent    = info.title || '';
+        this._els.title.textContent = info.title || '';
         this._els.subtitle.textContent = info.subtitle || '';
 
         // Set mode
@@ -198,16 +210,16 @@ class VideoPlayer {
         const root = this._container.querySelector('.vplayer');
         this._els = {
             root,
-            video:        root.querySelector('.vplayer__video'),
-            overlay:      root.querySelector('.vplayer__overlay'),
-            title:        root.querySelector('.vplayer__title'),
-            subtitle:     root.querySelector('.vplayer__subtitle'),
+            video: root.querySelector('.vplayer__video'),
+            overlay: root.querySelector('.vplayer__overlay'),
+            title: root.querySelector('.vplayer__title'),
+            subtitle: root.querySelector('.vplayer__subtitle'),
             progressFill: root.querySelector('.vplayer__progress-fill'),
-            timeCurrent:  root.querySelector('.vplayer__time-current'),
-            timeTotal:    root.querySelector('.vplayer__time-total'),
-            playIcon:     root.querySelector('.vplayer__play-icon'),
-            errorWrap:    root.querySelector('.vplayer__error'),
-            errorText:    root.querySelector('.vplayer__error-text'),
+            timeCurrent: root.querySelector('.vplayer__time-current'),
+            timeTotal: root.querySelector('.vplayer__time-total'),
+            playIcon: root.querySelector('.vplayer__play-icon'),
+            errorWrap: root.querySelector('.vplayer__error'),
+            errorText: root.querySelector('.vplayer__error-text'),
         };
     }
 
@@ -215,20 +227,20 @@ class VideoPlayer {
 
     _bindVideoEvents() {
         const v = this._els.video;
-        v.addEventListener('play',           this._onPlay);
-        v.addEventListener('pause',          this._onPause);
-        v.addEventListener('ended',          this._onEnded);
-        v.addEventListener('error',          this._onError);
+        v.addEventListener('play', this._onPlay);
+        v.addEventListener('pause', this._onPause);
+        v.addEventListener('ended', this._onEnded);
+        v.addEventListener('error', this._onError);
         v.addEventListener('loadedmetadata', this._onLoadedMeta);
     }
 
     _unbindVideoEvents() {
         const v = this._els.video;
         if (!v) return;
-        v.removeEventListener('play',           this._onPlay);
-        v.removeEventListener('pause',          this._onPause);
-        v.removeEventListener('ended',          this._onEnded);
-        v.removeEventListener('error',          this._onError);
+        v.removeEventListener('play', this._onPlay);
+        v.removeEventListener('pause', this._onPause);
+        v.removeEventListener('ended', this._onEnded);
+        v.removeEventListener('error', this._onError);
         v.removeEventListener('loadedmetadata', this._onLoadedMeta);
     }
 
@@ -297,7 +309,7 @@ class VideoPlayer {
     _togglePlay() {
         const v = this._els.video;
         if (v.paused) {
-            v.play().catch(() => {});
+            v.play().catch(() => { });
         } else {
             v.pause();
         }
@@ -335,6 +347,27 @@ class VideoPlayer {
         if (code === 3) msg = 'Decode error';
         if (code === 4) msg = 'Source not supported';
 
+        // Retry if attempts remain
+        if (this._retryCount < MAX_RETRIES && this._currentInfo) {
+            this._retryCount++;
+            console.log(`[VideoPlayer] Retry ${this._retryCount}/${MAX_RETRIES} — ${msg}`);
+
+            this._els.errorText.textContent = `${msg} — Retrying (${this._retryCount}/${MAX_RETRIES})…`;
+            this._els.errorWrap.style.display = 'flex';
+
+            this._retryTimer = setTimeout(() => {
+                if (!this._isMounted || !this._currentInfo) return;
+                this._els.errorWrap.style.display = 'none';
+
+                const video = this._els.video;
+                video.src = this._currentInfo.url;
+                video.load();
+                video.play().catch(() => this._syncPlayState(false));
+            }, RETRY_DELAY);
+            return;
+        }
+
+        // All retries exhausted — show final error
         this._els.errorText.textContent = msg;
         this._els.errorWrap.style.display = 'flex';
         this._dispatchEvent('player:error', { code, message: msg });
@@ -368,6 +401,11 @@ class VideoPlayer {
     }
 
     _onMetadataReady() {
+        // Successful load — reset retry counter
+        this._retryCount = 0;
+        clearTimeout(this._retryTimer);
+        this._els.errorWrap.style.display = 'none';
+
         const v = this._els.video;
         if (v.duration && isFinite(v.duration)) {
             this._els.timeTotal.textContent = this._formatTime(v.duration);
