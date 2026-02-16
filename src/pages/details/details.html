@@ -1,0 +1,43 @@
+<!-- MediaDetailsPage — shared detail view for Movies & Series -->
+<div class="details-page">
+    <!-- Blurred background -->
+    <div class="details-bg" id="details-bg"></div>
+
+    <!-- Top bar -->
+    <div class="details-topbar">
+        <button class="details-topbar__back" id="details-back">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round">
+                <polyline points="15 18 9 12 15 6" />
+            </svg>
+        </button>
+    </div>
+
+    <!-- Content -->
+    <div class="details-content">
+        <!-- Poster -->
+        <div class="details-poster" id="details-poster"></div>
+
+        <!-- Info panel -->
+        <div class="details-info">
+            <h1 class="details-title" id="details-title"></h1>
+            <div class="details-meta" id="details-meta"></div>
+            <p class="details-plot" id="details-plot"></p>
+
+            <!-- Play button (movies only) -->
+            <div id="details-actions"></div>
+
+            <!-- Season tabs (series only) -->
+            <div class="details-seasons" id="details-seasons" style="display:none"></div>
+
+            <!-- Episode list (series only) -->
+            <div class="details-episodes" id="details-episodes" style="display:none"></div>
+
+            <!-- Loading spinner -->
+            <div class="details-loading" id="details-loading">
+                <div class="details-loading__spinner"></div>
+                <span>Loading details…</span>
+            </div>
+        </div>
+    </div>
+</div>
