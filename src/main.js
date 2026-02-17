@@ -1,5 +1,6 @@
 // CSS imports — Vite bundles these into app.css
 import './styles/global.css';
+import './pages/splash/splash.css';
 import './pages/login/login.css';
 import './pages/home/home.css';
 import './pages/livetv/livetv.css';
@@ -9,6 +10,7 @@ import './components/MediaCard/MediaCard.css';
 import './pages/details/details.css';
 import './pages/player/player.css';
 
+import SplashPage from './pages/splash/SplashPage.js';
 import LoginPage from './pages/login/login.js';
 import HomePage from './pages/home/home.js';
 import XtreamAuth from './api/XtreamAuth.js';
@@ -39,19 +41,29 @@ class App {
         // Register bundled templates
         TemplateEngine.registerTemplates(templates);
 
+        // Mount splash — renders content into the #splash placeholder in index.html
+        this._splash = new SplashPage();
+        await this._splash.mount();
+
         // Install WebOS back button handler to prevent platform exit prompts
         WebOSBackHandler.install();
 
         this._bindGlobalEvents();
 
-        // Try to restore session from cached credentials
-        const session = await XtreamAuth.restoreSession();
+        // SplashPage owns the startup sequence: auth + preload.
+        // It returns the session if successful, null if unauthenticated.
+        const session = await this._splash.run();
+
         if (session) {
             await this._showHome(session);
         } else {
             await this._showLogin();
         }
+
+        await this._splash.dismiss();
     }
+
+    // ─── Page navigation ─────────────────────────────────────────
 
     async _showLogin(skipPush) {
         this._destroyCurrent();
@@ -102,6 +114,8 @@ class App {
         WebOSBackHandler.pushPageState(PAGES.PLAYER);
     }
 
+    // ─── Global events ───────────────────────────────────────────
+
     _bindGlobalEvents() {
         this._container.addEventListener(EVENTS.LOGIN_SUCCESS, async (e) => {
             const { session } = e.detail;
@@ -109,8 +123,12 @@ class App {
         });
 
         this._container.addEventListener(EVENTS.HOME_LOGOUT, () => {
+            localStorage.clear();
             XtreamAuth.logout();
-            this._showLogin();
+            // Replace current history entry with login so the back button
+            // cannot return the user to authenticated pages after logout.
+            history.replaceState({ page: PAGES.LOGIN }, '');
+            this._showLogin(true);
         });
 
         this._container.addEventListener(EVENTS.HOME_NAVIGATE, (e) => {
@@ -146,6 +164,14 @@ class App {
             console.log('[App] Back button pressed, state:', e.detail.state);
 
             const state = e.detail.state;
+
+            // Auth guard: if not authenticated, any back navigation goes to login.
+            // This prevents old history entries from showing authenticated pages
+            // after logout.
+            if (!XtreamAuth.isAuthenticated() && state?.page !== PAGES.LOGIN) {
+                this._showLogin(true);
+                return;
+            }
 
             // If we have a recorded state, handle it
             if (state && state.page) {
@@ -185,16 +211,11 @@ class App {
             } else if (!state) {
                 // Empty history - check if on home page, if so trigger exit
                 console.log('[App] History empty');
-                // Check if current page is HomePage
-                if (this._currentPage && this._currentPage.constructor.PAGE_ID === 'home') {
+                if (this._currentPage && this._currentPage.constructor.PAGE_ID === PAGES.HOME) {
                     console.log('[App] On home page, triggering exit');
-                    if (window.webOS && window.webOS.platformBack) {
-                        window.webOS.platformBack();
-                    } else if (window.PalmSystem && window.PalmSystem.platformBack) {
-                        window.PalmSystem.platformBack();
-                    }
+                    WebOSBackHandler.exitApp();
                 } else {
-                    // On other page, go back to home
+                    // On other page, go back to home or login
                     const session = XtreamAuth.getSession();
                     if (session) {
                         await this._showHome(session, true);
