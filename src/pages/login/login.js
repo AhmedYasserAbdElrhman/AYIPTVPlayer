@@ -22,6 +22,8 @@ import { EVENTS } from '../../config/AppConstants.js';
  */
 
 class LoginPage {
+    static PAGE_ID = 'login';
+
     constructor() {
         this._container = null;
         this._focusIndex = 0;
@@ -29,6 +31,7 @@ class LoginPage {
         this._isLoading = false;
         this._editingInput = null;  // the input currently being typed into, or null
         this._keyHandler = this._onKeyDown.bind(this);
+        this._loginTimeout = null;
         this._els = {};
     }
 
@@ -49,6 +52,7 @@ class LoginPage {
     }
 
     destroy() {
+        clearTimeout(this._loginTimeout);
         document.removeEventListener('keydown', this._keyHandler);
         if (this._container) this._container.innerHTML = '';
         this._focusables = [];
@@ -304,7 +308,8 @@ class LoginPage {
             const session = await XtreamAuth.login(host, port, username, password, useSSL);
             this._showStatus('Connected successfully!', 'success');
 
-            setTimeout(() => {
+            this._loginTimeout = setTimeout(() => {
+                if (!this._container) return;
                 this._container.dispatchEvent(
                     new CustomEvent(EVENTS.LOGIN_SUCCESS, {
                         detail: { session },
