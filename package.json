@@ -5,17 +5,14 @@
     "type": "module",
     "scripts": {
         "dev": "vite --host",
-
         "clean": "rm -rf dist output",
         "build": "npm run clean && vite build && npm run copy:webos",
-        "copy:webos": "cp webos/appinfo.json dist/ && cp webos/icon.png dist/ && cp webos/largeIcon.png dist/",
-
+        "copy:webos": "cp webos/appinfo.json dist/ && cp webos/icon.png dist/ && cp webos/largeIcon.png dist/ && cp webos/splashBackground.png dist/",
         "package": "npm run build && ares-package dist/ -o output/ --no-minify",
         "install:tv": "ares-install -d lgtv output/com.ay.iptv_1.0.0_all.ipk",
         "launch": "ares-launch -d lgtv com.ay.iptv",
         "close": "ares-launch -d lgtv --close com.ay.iptv",
         "inspect": "ares-inspect -d lgtv com.ay.iptv --open",
-
         "deploy": "npm run package && npm run install:tv && npm run launch",
         "redeploy": "npm run close && npm run deploy"
     },
