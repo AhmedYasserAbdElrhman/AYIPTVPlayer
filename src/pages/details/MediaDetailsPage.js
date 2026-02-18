@@ -42,10 +42,16 @@ class MediaDetailsPage {
         this._episodeEls = [];
         this._seasonIdx = 0;
         this._episodeIdx = 0;
+        this._playBtn = null;
 
         // Focus
         this._region = 0;       // 0=back, 1=play/seasons, 2=episodes
         this._keyHandler = this._onKey.bind(this);
+
+        // Delegated click handlers (one per container, avoids per-element listeners)
+        this._onActionClick = this._onActionClick.bind(this);
+        this._onSeasonClick = this._onSeasonClick.bind(this);
+        this._onEpisodeClick = this._onEpisodeClick.bind(this);
     }
 
     /* ═══════════════ LIFECYCLE ═══════════════ */
@@ -71,6 +77,12 @@ class MediaDetailsPage {
     destroy() {
         this._isDestroyed = true;
         document.removeEventListener('keydown', this._keyHandler);
+        this._el.actions?.removeEventListener('click', this._onActionClick);
+        this._el.seasons?.removeEventListener('click', this._onSeasonClick);
+        this._el.episodes?.removeEventListener('click', this._onEpisodeClick);
+        this._seasonBtns = [];
+        this._episodeEls = [];
+        this._playBtn = null;
         if (this._container) {
             this._container.textContent = '';
         }
@@ -129,6 +141,9 @@ class MediaDetailsPage {
     _bindEvents() {
         document.addEventListener('keydown', this._keyHandler);
         this._el.back.addEventListener('click', () => this._goBack());
+        this._el.actions.addEventListener('click', this._onActionClick);
+        this._el.seasons.addEventListener('click', this._onSeasonClick);
+        this._el.episodes.addEventListener('click', this._onEpisodeClick);
     }
 
     /* ═══════════════ DATA LOADING ═══════════════ */
@@ -177,9 +192,7 @@ class MediaDetailsPage {
             PLAY_SVG + ' Play' +
             '</button>';
 
-        const playBtn = this._el.actions.querySelector('#details-play');
-        playBtn.addEventListener('click', () => this._playMovie());
-        this._playBtn = playBtn;
+        this._playBtn = this._el.actions.querySelector('#details-play');
 
         // Focus play button
         this._region = 1;
@@ -250,11 +263,6 @@ class MediaDetailsPage {
             btn.textContent = 'Season ' + key;
             btn.dataset.season = key;
 
-            btn.addEventListener('click', () => {
-                this._seasonIdx = i;
-                this._switchSeason(key);
-            });
-
             container.appendChild(btn);
             this._seasonBtns.push(btn);
         }
@@ -303,11 +311,6 @@ class MediaDetailsPage {
             el.appendChild(body);
             el.appendChild(playIcon);
 
-            el.addEventListener('click', () => {
-                this._episodeIdx = i;
-                this._playEpisode(ep);
-            });
-
             container.appendChild(el);
             this._episodeEls.push(el);
         }
@@ -343,6 +346,33 @@ class MediaDetailsPage {
                 bubbles: true,
             })
         );
+    }
+
+    /* ═══════════════ DELEGATED CLICK HANDLERS ═══════════════ */
+
+    _onActionClick(e) {
+        if (e.target.closest('#details-play')) this._playMovie();
+    }
+
+    _onSeasonClick(e) {
+        const btn = e.target.closest('[data-season]');
+        if (!btn) return;
+        const idx = this._seasonKeys.indexOf(btn.dataset.season);
+        if (idx >= 0) {
+            this._seasonIdx = idx;
+            this._switchSeason(btn.dataset.season);
+        }
+    }
+
+    _onEpisodeClick(e) {
+        const el = e.target.closest('[data-idx]');
+        if (!el) return;
+        const idx = Number(el.dataset.idx);
+        const episodes = this._info?.episodes?.[this._activeSeason] || [];
+        if (episodes[idx]) {
+            this._episodeIdx = idx;
+            this._playEpisode(episodes[idx]);
+        }
     }
 
     /* ═══════════════ SHARED RENDERING ═══════════════ */

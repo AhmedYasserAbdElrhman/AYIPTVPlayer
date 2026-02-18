@@ -24,6 +24,8 @@ class PlayerPage {
         this._container = null;
         this._player = new VideoPlayer();
         this._isDestroyed = false;
+        this._rootEl = null;
+        this._backHandler = () => this._goBack();
     }
 
     // ─── Lifecycle ──────────────────────────────────────────
@@ -50,13 +52,16 @@ class PlayerPage {
         }
 
         // Listen for VideoPlayer's back event → navigate back
-        root.addEventListener('player:back', () => {
-            this._goBack();
-        });
+        this._rootEl = root;
+        root.addEventListener('player:back', this._backHandler);
     }
 
     destroy() {
         this._isDestroyed = true;
+        if (this._rootEl) {
+            this._rootEl.removeEventListener('player:back', this._backHandler);
+            this._rootEl = null;
+        }
         this._player.destroy();
         if (this._container) this._container.innerHTML = '';
         this._container = null;

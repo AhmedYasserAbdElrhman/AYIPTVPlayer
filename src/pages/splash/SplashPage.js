@@ -68,6 +68,7 @@ class SplashPage {
      *   credentials are missing / authentication failed.
      */
     async run() {
+        await Settings.init();
         if (!this._hasSavedCredentials()) return null;
 
         this.setStatus('Authenticating…');

@@ -33,8 +33,17 @@ class Settings {
             autoplay: false,
         };
 
-        // Load from persistent storage if available (WebOS supports localStorage)
-        this._loadFromStorage();
+        this._initialized = false;
+    }
+
+    /**
+     * Loads settings from encrypted storage.
+     * Must be called once during startup before reading credentials.
+     */
+    async init() {
+        if (this._initialized) return;
+        await this._loadFromStorage();
+        this._initialized = true;
     }
 
     /**
@@ -141,7 +150,9 @@ class Settings {
         if (data.ui) {
             this.ui = { ...this.ui, ...data.ui };
         }
-        this._saveToStorage();
+        if (!this._importing) {
+            this._saveToStorage();
+        }
         this._notify('import', this.export(false));
     }
 
@@ -167,23 +178,27 @@ class Settings {
     }
 
     /**
-     * Loads settings from localStorage (WebOS persistent storage).
+     * Loads settings from encrypted storage.
      * @private
      */
-    _loadFromStorage() {
-        const data = SettingsStorage.load();
+    async _loadFromStorage() {
+        const data = await SettingsStorage.load();
         if (data) {
+            this._importing = true;
             this.import(data);
+            this._importing = false;
         }
     }
 
     /**
-     * Saves settings to localStorage.
+     * Saves settings to encrypted storage (fire-and-forget).
      * @private
      */
     _saveToStorage() {
         const data = this.export(true); // include credentials for persistent login
-        SettingsStorage.save(data);
+        SettingsStorage.save(data).catch(err =>
+            console.error('[Settings] Save failed:', err),
+        );
     }
 
     /**
