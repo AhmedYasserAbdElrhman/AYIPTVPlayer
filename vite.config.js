@@ -76,6 +76,7 @@ export default defineConfig({
                 manualChunks: undefined,
             },
         },
+        chunkSizeWarningLimit: 800,
         assetsInlineLimit: 4096,
         cssCodeSplit: false,
         minify: 'esbuild',
