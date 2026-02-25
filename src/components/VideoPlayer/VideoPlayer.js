@@ -2,21 +2,25 @@
  * VideoPlayer — reusable, TV-optimised video player component.
  *
  * Features:
+ *  - Netflix-style controls overlay with slide-up title and gradient
  *  - Mini player (picture-in-picture style) and fullscreen modes
  *  - TV remote controls: OK → play/pause, Back → exit, Left/Right → seek
+ *  - HLS.js adaptive streaming for .m3u8 URLs, native fallback otherwise
+ *  - Loading spinner overlay during buffering
  *  - Overlay auto-hides after 4s of inactivity
  *  - Minimal DOM writes for WebOS performance
- *  - No external dependencies — vanilla HTMLVideoElement
  *
  * Usage:
  *   const player = new VideoPlayer();
- *   player.mount(containerEl);
+ *   await player.mount(containerEl);
  *   player.load({ url, title, subtitle, mode: 'mini' | 'fullscreen' });
  *   player.destroy();
  */
 
+import Hls from 'hls.js';
 import { mapRemoteEvent } from '../../input/RemoteKeyMapper.js';
 import { RemoteActions } from '../../input/RemoteActions.js';
+import TemplateEngine from '../../utils/templateEngine.js';
 
 // ─── Constants ───────────────────────────────────────────────
 const OVERLAY_TIMEOUT = 4000;
@@ -24,6 +28,13 @@ const SEEK_STEP = 10;   // seconds
 const SEEK_FAST_STEP = 30;   // seconds (long-press style)
 const MAX_RETRIES = 5;
 const RETRY_DELAY = 2000; // ms between retries
+const LOADING_DEBOUNCE = 300; // ms before showing spinner
+
+const HLS_CONFIG = {
+    enableWorker: true,
+    lowLatencyMode: false,
+    backBufferLength: 90,
+};
 
 class VideoPlayer {
     constructor() {
@@ -35,27 +46,44 @@ class VideoPlayer {
         this._isPlaying = false;
         this._isFullscreen = false;
         this._isMounted = false;
+        this._isLive = false;
         this._currentInfo = null;
+
+        // HLS.js instance
+        this._hls = null;
 
         // Retry state
         this._retryCount = 0;
         this._retryTimer = null;
+
+        // Loading debounce timer
+        this._loadingTimer = null;
+
+        // Focus: row 0 = progress bar, row 1 = controls buttons
+        this._focusRow = 1;  // default: controls row
+        this._focusCol = 1;  // default: play button (middle)
 
         // Bind event callbacks once to avoid GC churn
         this._onPlay = () => this._syncPlayState(true);
         this._onPause = () => this._syncPlayState(false);
         this._onEnded = () => this._handleEnded();
         this._onError = (e) => this._handleError(e);
-        this._onTimeUpdate = () => this._updateProgress();
         this._onLoadedMeta = () => this._onMetadataReady();
+        this._onWaiting = () => {
+            this._loadingTimer = setTimeout(() => this._showLoading(true), LOADING_DEBOUNCE);
+        };
+        this._onCanPlay = () => {
+            clearTimeout(this._loadingTimer);
+            this._showLoading(false);
+        };
     }
 
     // ─── Lifecycle ───────────────────────────────────────────
 
-    mount(container) {
+    async mount(container) {
         if (this._isMounted) return;
         this._container = container;
-        this._render();
+        await TemplateEngine.load('components/VideoPlayer/VideoPlayer.html', this._container);
         this._cacheDom();
         this._bindVideoEvents();
         this._isMounted = true;
@@ -69,6 +97,9 @@ class VideoPlayer {
         this._stopProgressLoop();
         clearTimeout(this._overlayTimer);
         clearTimeout(this._retryTimer);
+        clearTimeout(this._loadingTimer);
+
+        this._destroyHls();
 
         if (this._els.video) {
             this._els.video.pause();
@@ -95,14 +126,24 @@ class VideoPlayer {
         this._currentInfo = info;
         this._retryCount = 0;
         clearTimeout(this._retryTimer);
-        const video = this._els.video;
 
-        // Hide any previous error
-        this._els.errorWrap.style.display = 'none';
+        // Reset previous state
+        this._els.errorWrap.classList.remove('vplayer__error--active');
+        this._isLive = !!info.live;
 
-        // Set source
-        video.src = info.url;
-        video.load();
+        // Apply live mode immediately if caller says it's live
+        if (this._isLive) {
+            this._els.root.classList.add('vplayer--live');
+        } else {
+            this._els.root.classList.remove('vplayer--live');
+        }
+
+        // Show nav buttons for episodes too
+        if (info.episodes) {
+            this._els.root.classList.add('vplayer--has-nav');
+        } else {
+            this._els.root.classList.remove('vplayer--has-nav');
+        }
 
         // Update overlay text
         this._els.title.textContent = info.title || '';
@@ -115,12 +156,8 @@ class VideoPlayer {
             this.enterMini();
         }
 
-        // Attempt autoplay
-        video.play().catch(() => {
-            // Autoplay blocked — user must press OK
-            this._syncPlayState(false);
-        });
-
+        // Load source (HLS or native)
+        this._loadSource(info.url);
         this._showOverlay();
     }
 
@@ -129,11 +166,13 @@ class VideoPlayer {
      */
     stop() {
         if (!this._isMounted) return;
+        this._destroyHls();
         const video = this._els.video;
         video.pause();
         video.removeAttribute('src');
         video.load();
         this._stopProgressLoop();
+        this._showLoading(false);
         this._setVisible(false);
         this._removeKeyHandler();
         this._currentInfo = null;
@@ -168,59 +207,29 @@ class VideoPlayer {
         return this._isFullscreen;
     }
 
-    // ─── Render ──────────────────────────────────────────────
-
-    _render() {
-        this._container.innerHTML = `
-        <div class="vplayer" style="display:none;">
-            <video class="vplayer__video" playsinline></video>
-
-            <div class="vplayer__overlay">
-                <div class="vplayer__overlay-top">
-                    <span class="vplayer__title"></span>
-                    <span class="vplayer__subtitle"></span>
-                </div>
-                <div class="vplayer__overlay-bottom">
-                    <div class="vplayer__progress-track">
-                        <div class="vplayer__progress-fill"></div>
-                    </div>
-                    <div class="vplayer__time-row">
-                        <span class="vplayer__time-current">0:00</span>
-                        <div class="vplayer__controls-hint">
-                            <span class="vplayer__play-icon">▶</span>
-                        </div>
-                        <span class="vplayer__time-total">0:00</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="vplayer__error" style="display:none;">
-                <svg viewBox="0 0 24 24" width="48" height="48" fill="none"
-                     stroke="currentColor" stroke-width="1.5">
-                    <circle cx="12" cy="12" r="10"/>
-                    <line x1="15" y1="9" x2="9" y2="15"/>
-                    <line x1="9" y1="9" x2="15" y2="15"/>
-                </svg>
-                <span class="vplayer__error-text">Playback error</span>
-            </div>
-        </div>`;
-    }
-
     _cacheDom() {
         const root = this._container.querySelector('.vplayer');
         this._els = {
             root,
             video: root.querySelector('.vplayer__video'),
             overlay: root.querySelector('.vplayer__overlay'),
+            info: root.querySelector('.vplayer__info'),
             title: root.querySelector('.vplayer__title'),
             subtitle: root.querySelector('.vplayer__subtitle'),
+            progressTrack: root.querySelector('.vplayer__progress-track'),
             progressFill: root.querySelector('.vplayer__progress-fill'),
             timeCurrent: root.querySelector('.vplayer__time-current'),
             timeTotal: root.querySelector('.vplayer__time-total'),
-            playIcon: root.querySelector('.vplayer__play-icon'),
+            playBtn: root.querySelector('.vplayer__play-btn'),
+            prevBtn: root.querySelector('.vplayer__prev-btn'),
+            nextBtn: root.querySelector('.vplayer__next-btn'),
+            loading: root.querySelector('.vplayer__loading'),
             errorWrap: root.querySelector('.vplayer__error'),
             errorText: root.querySelector('.vplayer__error-text'),
         };
+        // Set initial play icon text
+        const icon = this._els.playBtn?.querySelector('.vplayer__play-icon');
+        if (icon) icon.textContent = '▶';
     }
 
     // ─── Video Events ────────────────────────────────────────
@@ -232,6 +241,12 @@ class VideoPlayer {
         v.addEventListener('ended', this._onEnded);
         v.addEventListener('error', this._onError);
         v.addEventListener('loadedmetadata', this._onLoadedMeta);
+        v.addEventListener('waiting', this._onWaiting);
+        v.addEventListener('canplay', this._onCanPlay);
+
+        // Channel nav buttons
+        this._els.prevBtn?.addEventListener('click', () => this._dispatchEvent('player:channel-up'));
+        this._els.nextBtn?.addEventListener('click', () => this._dispatchEvent('player:channel-down'));
     }
 
     _unbindVideoEvents() {
@@ -242,6 +257,100 @@ class VideoPlayer {
         v.removeEventListener('ended', this._onEnded);
         v.removeEventListener('error', this._onError);
         v.removeEventListener('loadedmetadata', this._onLoadedMeta);
+        v.removeEventListener('waiting', this._onWaiting);
+        v.removeEventListener('canplay', this._onCanPlay);
+    }
+
+    // ─── HLS.js ──────────────────────────────────────────────
+
+    _loadSource(url) {
+        const video = this._els.video;
+        this._destroyHls();
+        this._showLoading(true);
+
+        const isHls = url.includes('.m3u8');
+
+        if (isHls && Hls.isSupported()) {
+            const hls = new Hls(HLS_CONFIG);
+            this._hls = hls;
+
+            hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                this._showLoading(false);
+                video.play().catch(() => this._syncPlayState(false));
+            });
+
+            // Auto-detect live stream from HLS manifest
+            hls.on(Hls.Events.LEVEL_LOADED, (_event, data) => {
+                if (data.details && data.details.live && !this._isLive) {
+                    this._isLive = true;
+                    this._els.root.classList.add('vplayer--live');
+                    console.log('[VideoPlayer] HLS detected LIVE stream from manifest');
+                }
+            });
+
+            hls.on(Hls.Events.ERROR, (_event, data) => {
+                if (!data.fatal) return;
+
+                console.warn('[VideoPlayer] HLS fatal error:', data.type, data);
+
+                // Parsing errors (e.g. ISP redirect returning HTML) are NOT recoverable
+                const isParsingError = data.details && data.details.toLowerCase().includes('parsing');
+
+                if (data.type === Hls.ErrorTypes.NETWORK_ERROR && !isParsingError && this._retryCount < MAX_RETRIES) {
+                    this._retryCount++;
+                    console.log(`[VideoPlayer] HLS network retry ${this._retryCount}/${MAX_RETRIES}`);
+                    hls.startLoad();
+                    return;
+                }
+
+                if (data.type === Hls.ErrorTypes.MEDIA_ERROR && this._retryCount < MAX_RETRIES) {
+                    this._retryCount++;
+                    console.log(`[VideoPlayer] HLS media recovery ${this._retryCount}/${MAX_RETRIES}`);
+                    hls.recoverMediaError();
+                    return;
+                }
+
+                // Unrecoverable
+                this._showLoading(false);
+                this._handleHlsError(data);
+            });
+
+            hls.loadSource(url);
+            hls.attachMedia(video);
+
+        } else if (isHls && video.canPlayType('application/vnd.apple.mpegurl')) {
+            // Native HLS (Safari / some WebOS builds)
+            video.src = url;
+            video.load();
+            video.play().catch(() => this._syncPlayState(false));
+
+        } else {
+            // Plain MP4 or other native format
+            video.src = url;
+            video.load();
+            video.play().catch(() => this._syncPlayState(false));
+        }
+    }
+
+    _destroyHls() {
+        if (this._hls) {
+            this._hls.destroy();
+            this._hls = null;
+        }
+    }
+
+    _handleHlsError(data) {
+        // Destroy HLS immediately to stop the event flood
+        this._destroyHls();
+        this._syncPlayState(false);
+        this._showLoading(false);
+
+        const msg = `Stream error (${data.type})`;
+        console.warn(`[VideoPlayer] HLS unrecoverable: ${msg}`);
+
+        this._els.errorText.textContent = msg;
+        this._els.errorWrap.classList.add('vplayer__error--active');
+        this._dispatchEvent('player:error', { message: msg });
     }
 
     // ─── Key Handling (fullscreen only) ──────────────────────
@@ -256,51 +365,155 @@ class VideoPlayer {
 
     _onKeyDown(e) {
         const action = mapRemoteEvent(e);
+        if (!action) return;
 
-        if (action === RemoteActions.OK) {
-            e.preventDefault();
-            e.stopPropagation();
-            this._togglePlay();
-            this._showOverlay();
-            return;
-        }
+        e.preventDefault();
+        e.stopPropagation();
 
         if (action === RemoteActions.BACK) {
-            e.preventDefault();
-            e.stopPropagation();
             this._dispatchEvent('player:back');
             return;
         }
 
-        if (action === RemoteActions.RIGHT) {
-            e.preventDefault();
-            e.stopPropagation();
-            this._seek(SEEK_STEP);
+        // Show overlay on any key if hidden
+        const overlayVisible = this._els.overlay.classList.contains('vplayer__overlay--visible');
+        if (!overlayVisible) {
+            this._showOverlay();
+            this._focusRow = 1; // reset to controls row
+            this._focusCol = this._hasNavButtons() ? 1 : 0; // play button
+            this._updateFocus();
+            return;
+        }
+
+        // ── OK: activate focused item ──
+        if (action === RemoteActions.OK) {
+            this._activateFocused();
             this._showOverlay();
             return;
         }
 
+        // ── LEFT / RIGHT ──
         if (action === RemoteActions.LEFT) {
-            e.preventDefault();
-            e.stopPropagation();
-            this._seek(-SEEK_STEP);
+            if (this._focusRow === 0) {
+                // On progress bar → seek backward
+                this._seek(-SEEK_STEP);
+            } else {
+                // On controls row → navigate between buttons
+                this._moveFocusCol(-1);
+            }
             this._showOverlay();
             return;
         }
 
-        // Channel up/down → seek faster
+        if (action === RemoteActions.RIGHT) {
+            if (this._focusRow === 0) {
+                // On progress bar → seek forward
+                this._seek(SEEK_STEP);
+            } else {
+                // On controls row → navigate between buttons
+                this._moveFocusCol(1);
+            }
+            this._showOverlay();
+            return;
+        }
+
+        // ── UP / DOWN: navigate between progress bar and controls row ──
+        if (action === RemoteActions.UP) {
+            if (this._isLive) {
+                this._dispatchEvent('player:channel-up');
+            } else if (this._focusRow === 1) {
+                // Move up to progress bar
+                this._focusRow = 0;
+                this._updateFocus();
+            }
+            this._showOverlay();
+            return;
+        }
+
+        if (action === RemoteActions.DOWN) {
+            if (this._isLive) {
+                this._dispatchEvent('player:channel-down');
+            } else if (this._focusRow === 0) {
+                // Move down to controls row
+                this._focusRow = 1;
+                this._updateFocus();
+            }
+            this._showOverlay();
+            return;
+        }
+
+        // ── CHANNEL UP/DOWN: channel switch (live) or fast seek (VOD) ──
         if (action === RemoteActions.CHANNEL_UP) {
-            e.preventDefault();
-            this._seek(SEEK_FAST_STEP);
+            if (this._isLive) {
+                this._dispatchEvent('player:channel-up');
+            } else {
+                this._seek(SEEK_FAST_STEP);
+            }
             this._showOverlay();
             return;
         }
 
         if (action === RemoteActions.CHANNEL_DOWN) {
-            e.preventDefault();
-            this._seek(-SEEK_FAST_STEP);
+            if (this._isLive) {
+                this._dispatchEvent('player:channel-down');
+            } else {
+                this._seek(-SEEK_FAST_STEP);
+            }
             this._showOverlay();
             return;
+        }
+    }
+
+    // ─── Focus Management ─────────────────────────────────────
+
+    _hasNavButtons() {
+        return this._els.root.classList.contains('vplayer--live') ||
+            this._els.root.classList.contains('vplayer--has-nav');
+    }
+
+    _getControlButtons() {
+        if (this._hasNavButtons()) {
+            return [this._els.prevBtn, this._els.playBtn, this._els.nextBtn];
+        }
+        return [this._els.playBtn];
+    }
+
+    _moveFocusCol(dir) {
+        const btns = this._getControlButtons();
+        this._focusCol = Math.max(0, Math.min(btns.length - 1, this._focusCol + dir));
+        this._updateFocus();
+    }
+
+    _updateFocus() {
+        const btns = this._getControlButtons();
+        // Blur all control buttons
+        btns.forEach(btn => btn?.blur());
+        // Blur progress track
+        this._els.progressTrack?.blur();
+
+        if (this._focusRow === 0 && !this._isLive) {
+            // Focus progress bar
+            this._els.progressTrack?.focus();
+        } else {
+            // Focus the active control button
+            const btn = btns[this._focusCol];
+            btn?.focus();
+        }
+    }
+
+    _activateFocused() {
+        if (this._focusRow === 0) {
+            this._togglePlay();
+            return;
+        }
+        const btns = this._getControlButtons();
+        const btn = btns[this._focusCol];
+        if (btn === this._els.playBtn) {
+            this._togglePlay();
+        } else if (btn === this._els.prevBtn) {
+            this._dispatchEvent('player:channel-up');
+        } else if (btn === this._els.nextBtn) {
+            this._dispatchEvent('player:channel-down');
         }
     }
 
@@ -323,11 +536,16 @@ class VideoPlayer {
 
     _syncPlayState(playing) {
         this._isPlaying = playing;
-        this._els.playIcon.textContent = playing ? '❚❚' : '▶';
+
+        // Toggle CSS class + icon text
+        this._els.playBtn?.classList.toggle('vplayer__play-btn--paused', playing);
+        const icon = this._els.playBtn?.querySelector('.vplayer__play-icon');
+        if (icon) icon.textContent = playing ? '❚❚' : '▶';
 
         if (playing) {
             this._startProgressLoop();
-            this._els.errorWrap.style.display = 'none';
+            this._els.errorWrap.classList.remove('vplayer__error--active');
+            this._showLoading(false);
         } else {
             this._stopProgressLoop();
         }
@@ -339,8 +557,10 @@ class VideoPlayer {
         this._dispatchEvent('player:ended');
     }
 
-    _handleError(e) {
+    _handleError() {
         this._syncPlayState(false);
+        this._showLoading(false);
+
         const code = this._els.video?.error?.code;
         let msg = 'Playback error';
         if (code === 2) msg = 'Network error';
@@ -355,24 +575,21 @@ class VideoPlayer {
             console.log(`[VideoPlayer] Retry ${this._retryCount}/${MAX_RETRIES} — ${msg}`);
 
             this._els.errorText.textContent = `${msg} — Retrying (${this._retryCount}/${MAX_RETRIES})…`;
-            this._els.errorWrap.style.display = 'flex';
+            this._els.errorWrap.classList.add('vplayer__error--active');
 
             this._retryTimer = setTimeout(() => {
                 if (!this._isMounted || !this._currentInfo) return;
-                this._els.errorWrap.style.display = 'none';
-
-                const video = this._els.video;
-                video.src = this._currentInfo.url;
-                video.load();
-                video.play().catch(() => this._syncPlayState(false));
+                this._els.errorWrap.classList.remove('vplayer__error--active');
+                this._loadSource(this._currentInfo.url);
             }, RETRY_DELAY);
             return;
         }
 
         // Non-recoverable or retries exhausted — show final error
         console.warn(`[VideoPlayer] Playback failed: ${msg} (code ${code})`);
+        console.log(`[VideoPlayer] URL: ${this._currentInfo.url}`);
         this._els.errorText.textContent = msg;
-        this._els.errorWrap.style.display = 'flex';
+        this._els.errorWrap.classList.add('vplayer__error--active');
         this._dispatchEvent('player:error', { code, message: msg });
     }
 
@@ -407,15 +624,17 @@ class VideoPlayer {
         // Successful load — reset retry counter
         this._retryCount = 0;
         clearTimeout(this._retryTimer);
-        this._els.errorWrap.style.display = 'none';
+        this._els.errorWrap.classList.remove('vplayer__error--active');
+        this._showLoading(false);
 
         const v = this._els.video;
-        if (v.duration && isFinite(v.duration)) {
+        if (!this._isLive && v.duration && isFinite(v.duration)) {
+            this._els.root.classList.remove('vplayer--live');
             this._els.timeTotal.textContent = this._formatTime(v.duration);
         } else {
-            // Live stream — no duration
-            this._els.timeTotal.textContent = 'LIVE';
-            this._els.progressFill.style.width = '100%';
+            // Live stream — hide progress/time, show LIVE badge
+            this._isLive = true;
+            this._els.root.classList.add('vplayer--live');
         }
     }
 
@@ -430,6 +649,14 @@ class VideoPlayer {
                 this._els.overlay.classList.remove('vplayer__overlay--visible');
             }, OVERLAY_TIMEOUT);
         }
+    }
+
+    // ─── Loading ─────────────────────────────────────────────
+
+    _showLoading(show) {
+        if (!this._els.loading) return;
+        this._els.loading.classList.toggle('vplayer__loading--active', show);
+        if (!show) clearTimeout(this._loadingTimer);
     }
 
     // ─── Helpers ─────────────────────────────────────────────

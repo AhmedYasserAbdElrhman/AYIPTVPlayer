@@ -1,10 +1,10 @@
-/* ─── Video Player — TV-optimised ────────────────────────────── */
+/* ─── Video Player — Netflix-style layout, app theme ─────────── */
 
 .vplayer {
     position: relative;
     background: #000;
     overflow: hidden;
-    border-radius: 16px;
+    border-radius: 0;
 }
 
 .vplayer__video {
@@ -23,12 +23,16 @@
     right: 72px;
     width: 480px;
     height: 270px;
-    border: 3px solid rgba(108, 92, 231, 0.4);
-    border-radius: 16px;
+    border: 3px solid var(--accent-glow);
+    border-radius: var(--radius-lg);
     box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
 }
 
 .vplayer--mini .vplayer__overlay {
+    display: none;
+}
+
+.vplayer--mini .vplayer__loading {
     display: none;
 }
 
@@ -43,111 +47,227 @@
     border-radius: 0;
 }
 
-/* ─── Overlay ────────────────────────────────────────────────── */
+/* ─── Controls Overlay ───────────────────────────────────────── */
 
 .vplayer__overlay {
     position: absolute;
     inset: 0;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
-    background: linear-gradient(
-        180deg,
-        rgba(0, 0, 0, 0.7) 0%,
-        transparent 30%,
-        transparent 60%,
-        rgba(0, 0, 0, 0.8) 100%
-    );
+    justify-content: flex-end;
     opacity: 0;
-    transition: opacity 200ms ease;
+    transition: opacity 220ms ease;
     pointer-events: none;
+    z-index: 3;
 }
 
 .vplayer__overlay--visible {
     opacity: 1;
+    pointer-events: auto;
 }
 
-/* ── Overlay Top ── */
+/* ── Channel Info — slides up above controls ── */
 
-.vplayer__overlay-top {
-    padding: 36px 48px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
+.vplayer__info {
+    padding: 0 48px 24px;
+    transform: translateY(10px);
+    opacity: 0;
+    transition: transform 300ms ease, opacity 300ms ease;
+}
+
+.vplayer__overlay--visible .vplayer__info {
+    transform: translateY(0);
+    opacity: 1;
 }
 
 .vplayer__title {
-    font-size: 36px;
+    font-size: var(--font-size-2xl);
     font-weight: 700;
-    color: #fff;
+    color: var(--text-primary);
     letter-spacing: -0.3px;
-    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
 }
 
 .vplayer__subtitle {
-    font-size: 22px;
-    color: rgba(255, 255, 255, 0.65);
+    font-size: var(--font-size-lg);
+    color: var(--text-secondary);
+    margin-top: 4px;
     text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
 }
 
-/* ── Overlay Bottom ── */
+/* ── Bottom Controls Container ── */
 
-.vplayer__overlay-bottom {
+.vplayer__controls {
+    background: linear-gradient(
+        to top,
+        rgba(0, 0, 0, 0.94) 0%,
+        rgba(0, 0, 0, 0.4) 60%,
+        transparent 100%
+    );
     padding: 0 48px 36px;
 }
 
+/* ── Progress Bar ── */
+
 .vplayer__progress-track {
     width: 100%;
-    height: 6px;
+    height: 5px;
     background: rgba(255, 255, 255, 0.15);
-    border-radius: 3px;
+    border-radius: var(--radius-full);
     overflow: hidden;
-    margin-bottom: 16px;
+    margin-bottom: 20px;
+    transition: height 150ms ease, box-shadow 150ms ease;
+}
+
+.vplayer__progress-track:focus {
+    outline: none;
+    height: 8px;
+    box-shadow: 0 0 0 3px var(--accent), 0 0 12px rgba(var(--accent-rgb, 99, 102, 241), 0.4);
 }
 
 .vplayer__progress-fill {
     height: 100%;
     width: 0%;
-    background: linear-gradient(90deg, #6c5ce7, #a855f7);
-    border-radius: 3px;
+    background: var(--accent-gradient);
+    border-radius: var(--radius-full);
     will-change: width;
 }
 
-.vplayer__time-row {
-    display: flex;
+/* ── Controls Row ── */
+
+.vplayer__controls-row {
+    display: grid;
+    grid-template-columns: auto auto auto 1fr auto;
     align-items: center;
-    justify-content: space-between;
+    gap: 16px;
 }
 
-.vplayer__time-current,
-.vplayer__time-total {
-    font-size: 22px;
-    font-weight: 500;
-    color: rgba(255, 255, 255, 0.7);
-    font-variant-numeric: tabular-nums;
-    min-width: 70px;
-}
+/* ── Channel Nav Buttons (prev/next) — visible only in live mode ── */
 
-.vplayer__time-total {
-    text-align: right;
-}
-
-.vplayer__controls-hint {
-    display: flex;
+.vplayer__nav-btn {
+    display: none;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    color: var(--text-primary);
+    font-size: 18px;
+    line-height: 1;
     align-items: center;
-    gap: 24px;
+    justify-content: center;
+    cursor: default;
+    transition: background 220ms ease;
 }
 
-.vplayer__play-icon {
-    font-size: 28px;
-    color: #fff;
+.vplayer__nav-btn:focus {
+    outline: 3px solid var(--accent);
+    outline-offset: 3px;
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.vplayer--live .vplayer__nav-btn,
+.vplayer--has-nav .vplayer__nav-btn {
+    display: flex;
+}
+
+/* ── Play Button ── */
+
+.vplayer__play-btn {
     width: 56px;
     height: 56px;
+    border-radius: 50%;
+    background: var(--text-primary);
+    border: none;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(108, 92, 231, 0.6);
+    cursor: default;
+    transition: background 220ms ease;
+}
+
+.vplayer__play-btn:focus {
+    outline: 3px solid var(--accent);
+    outline-offset: 3px;
+}
+
+/* Play/Pause icon — text characters (most reliable on WebOS) */
+.vplayer__play-icon {
+    display: block;
+    font-size: 22px;
+    line-height: 1;
+    color: var(--bg-primary);
+    margin-left: 3px;
+}
+
+.vplayer__play-btn--paused .vplayer__play-icon {
+    margin-left: 0;
+    letter-spacing: 2px;
+}
+
+/* ── Time Display ── */
+
+.vplayer__time-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-self: end;
+}
+
+.vplayer__time-current,
+.vplayer__time-sep,
+.vplayer__time-total {
+    font-size: var(--font-size-lg);
+    font-weight: 500;
+    color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ── Live Badge ── */
+
+.vplayer__live-badge {
+    display: none;
+    align-items: center;
+    justify-self: end;
+    padding: 4px 12px;
+    border-radius: var(--radius-sm);
+    background: #e50914;
+    color: var(--text-primary);
+    font-size: var(--font-size-sm);
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+/* ─── Live Mode — hide progress + time, show badge ───────────── */
+
+.vplayer--live .vplayer__progress-track { display: none; }
+.vplayer--live .vplayer__time-info { display: none; }
+.vplayer--live .vplayer__live-badge { display: inline-flex; }
+
+/* ─── Loading Overlay ────────────────────────────────────────── */
+
+.vplayer__loading {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 2;
+}
+
+.vplayer__loading--active {
+    display: flex;
+}
+
+.vplayer__spinner {
+    width: 56px;
+    height: 56px;
+    border: 4px solid rgba(255, 255, 255, 0.15);
+    border-top-color: var(--accent);
     border-radius: 50%;
+    animation: spin 0.8s linear infinite;
 }
 
 /* ─── Error State ────────────────────────────────────────────── */
@@ -155,13 +275,23 @@
 .vplayer__error {
     position: absolute;
     inset: 0;
-    display: flex;
+    display: none;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: 16px;
-    background: rgba(0, 0, 0, 0.85);
-    color: #ff4466;
-    font-size: 24px;
+    background: rgba(0, 0, 0, 0.88);
+    color: var(--text-error);
+    font-size: var(--font-size-xl);
     font-weight: 500;
+    z-index: 10;
+}
+
+.vplayer__error--active {
+    display: flex;
+}
+
+.vplayer__error-icon {
+    font-size: 48px;
+    line-height: 1;
 }
