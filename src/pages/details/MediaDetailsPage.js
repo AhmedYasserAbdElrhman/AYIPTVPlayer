@@ -22,6 +22,8 @@ import { mapRemoteEvent } from '../../input/RemoteKeyMapper.js';
 import { RemoteActions } from '../../input/RemoteActions.js';
 import TemplateEngine from '../../utils/templateEngine.js';
 
+const SUPPORTED_EXT = new Set(['mp4', 'm3u8', 'ts', 'mkv', 'webm']);
+
 const PLAY_SVG = '<svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21"/></svg>';
 
 class MediaDetailsPage {
@@ -203,7 +205,8 @@ class MediaDetailsPage {
         const item = this._item;
         const info = this._info?.info || this._info?.movie_data || {};
         const merged = { ...item, ...info };
-        const ext = merged.container_extension || item.container_extension || 'mp4';
+        const rawExt = merged.container_extension || item.container_extension || 'mp4';
+        const ext = SUPPORTED_EXT.has(rawExt) ? rawExt : 'mp4';
         const url = VodService.getStreamUrl(item.stream_id || item.id, ext);
 
         console.log('[MediaDetailsPage] _playMovie called!', { url, ext, id: item.stream_id || item.id });
@@ -331,10 +334,12 @@ class MediaDetailsPage {
     }
 
     _playEpisode(episode) {
-        const ext = episode.container_extension || 'mp4';
+        const rawExt = episode.container_extension || 'mp4';
+        const ext = SUPPORTED_EXT.has(rawExt) ? rawExt : 'mp4';
         const url = SeriesService.getEpisodeUrl(episode.id, ext);
         const seriesName = this._item?.name || 'Series';
         const epTitle = episode.title || episode.name || 'Episode ' + (episode.episode_num || '');
+        const episodes = this._info?.episodes?.[this._activeSeason] || [];
 
         this._container.dispatchEvent(
             new CustomEvent(EVENTS.PLAY_REQUEST, {
@@ -342,6 +347,9 @@ class MediaDetailsPage {
                     url,
                     title: seriesName,
                     subtitle: 'S' + this._activeSeason + ' · ' + epTitle,
+                    episodes,
+                    episodeIdx: this._episodeIdx,
+                    season: this._activeSeason,
                 },
                 bubbles: true,
             })
