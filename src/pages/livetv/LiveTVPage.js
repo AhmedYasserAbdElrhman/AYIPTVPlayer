@@ -99,7 +99,7 @@ class LiveTVPage {
         this._setupImgObserver();
 
         // Player mounts inside the panel slot
-        this._player.mount(this._el.playerMount);
+        await this._player.mount(this._el.playerMount);
         this._loadData();
         this._focusTo(2, 0);
     }
@@ -189,6 +189,10 @@ class LiveTVPage {
             }
         });
         this._el.playerMount.addEventListener('player:error', () => this._stop());
+
+        // Channel switching from fullscreen player
+        this._el.playerMount.addEventListener('player:channel-up', () => this._switchChannel(-1));
+        this._el.playerMount.addEventListener('player:channel-down', () => this._switchChannel(1));
 
         // Search inputs
         this._el.catSearch.addEventListener('input', () => {
@@ -491,7 +495,20 @@ class LiveTVPage {
             title: stream.name || 'Live TV',
             subtitle: 'Live',
             mode: 'mini',
+            live: true,
         });
+    }
+
+    _switchChannel(direction) {
+        if (!this._viewStreams.length) return;
+        const newIdx = this._chIdx + direction;
+        if (newIdx < 0 || newIdx >= this._viewStreams.length) return;
+        this._chIdx = newIdx;
+        const stream = this._viewStreams[newIdx];
+        if (!stream) return;
+        // Stay in fullscreen — _play loads in mini, then we re-enter fullscreen
+        this._play(stream);
+        this._player.enterFullscreen();
     }
 
     _stop() {
