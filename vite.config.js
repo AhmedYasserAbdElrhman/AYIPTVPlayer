@@ -15,22 +15,21 @@ function inlineTemplates() {
         load(id) {
             if (id !== resolvedId) return;
             const templates = {};
-            const pagesDir = resolve(__dirname, 'src/pages');
-            function scan(dir, prefix = '') {
+            function scan(dir, keyPrefix, subDir = '') {
                 const entries = readdirSync(dir);
                 for (const entry of entries) {
                     if (entry.startsWith('.')) continue;
                     const fullPath = join(dir, entry);
-                    const relativePath = prefix ? `${prefix}/${entry}` : entry;
+                    const relativePath = subDir ? `${subDir}/${entry}` : entry;
                     if (statSync(fullPath).isDirectory()) {
-                        scan(fullPath, relativePath);
+                        scan(fullPath, keyPrefix, relativePath);
                     } else if (entry.endsWith('.html')) {
-                        const key = `pages/${relativePath}`;
-                        templates[key] = readFileSync(fullPath, 'utf-8');
+                        templates[`${keyPrefix}/${relativePath}`] = readFileSync(fullPath, 'utf-8');
                     }
                 }
             }
-            scan(pagesDir);
+            scan(resolve(__dirname, 'src/pages'), 'pages');
+            scan(resolve(__dirname, 'src/components'), 'components');
             return `export default ${JSON.stringify(templates)};`;
         },
     };
