@@ -9,6 +9,7 @@ import './components/VideoPlayer/VideoPlayer.css';
 import './components/MediaCard/MediaCard.css';
 import './pages/details/details.css';
 import './pages/player/player.css';
+import './components/ResumeAlert/ResumeAlert.css';
 
 import SplashPage from './pages/splash/SplashPage.js';
 import LoginPage from './pages/login/login.js';
@@ -23,6 +24,7 @@ import TemplateEngine from './utils/templateEngine.js';
 import templates from 'virtual:templates';
 import WebOSBackHandler from './utils/WebOSBackHandler.js';
 import { PAGES, EVENTS, SELECTORS } from './config/AppConstants.js';
+import WatchHistoryService from './services/WatchHistoryService.js';
 
 class App {
     constructor() {
@@ -146,7 +148,7 @@ class App {
 
         this._container.addEventListener(EVENTS.HOME_OPEN_ITEM, (e) => {
             const { itemId } = e.detail;
-            // TODO: Handle opening a recent/favourite item
+            this._openHistoryItem(itemId);
         });
 
         // Listen for detail page requests
@@ -225,6 +227,41 @@ class App {
                 }
             }
         });
+    }
+
+    _openHistoryItem(itemId) {
+        const entry = WatchHistoryService.getById(itemId);
+        if (!entry) {
+            console.warn('[App] History entry not found:', itemId);
+            return;
+        }
+
+        if (entry.contentType === 'live') {
+            this._showLiveTV();
+        } else if (entry.contentType === 'episode' && entry.seriesId) {
+            // Episode — navigate to series details page so user gets
+            // season/episode browser and next/prev in the player.
+            // Details page looks up history internally for continue button.
+            this._showDetails({
+                item: {
+                    series_id: entry.seriesId,
+                    id: entry.seriesId,
+                    name: entry.seriesName || entry.name,
+                    cover: entry.thumbnail || '',
+                },
+                type: 'series',
+            });
+        } else {
+            // Movie — play directly with stored metadata
+            this._showPlayer({
+                url: entry.url,
+                title: entry.name,
+                subtitle: entry.meta,
+                contentId: entry.contentId,
+                contentType: entry.contentType,
+                thumbnail: entry.thumbnail,
+            });
+        }
     }
 
     _destroyCurrent() {

@@ -3,6 +3,8 @@ import { mapRemoteEvent } from '../../input/RemoteKeyMapper.js';
 import { RemoteActions } from '../../input/RemoteActions.js';
 import { PAGES, EVENTS } from '../../config/AppConstants.js';
 import RecentCard from '../../components/RecentCard/RecentCard.js';
+import WatchHistoryService from '../../services/WatchHistoryService.js';
+import PlaybackProgressService from '../../services/PlaybackProgressService.js';
 
 /**
  * Home page controller — Smart TV remote optimised.
@@ -299,20 +301,14 @@ class HomePage {
     // ─── Recent / Favourites ───────────────────────────────────
 
     _loadRecentItems() {
-        // ── Dummy data for testing (remove in production) ──
-        const DUMMY_RECENT = [
-            { id: 'd1', name: 'BBC World News', meta: 'News • International', type: 'live', thumbnail: '' },
-            { id: 'd2', name: 'Inception', meta: '2010 • Sci-Fi • Thriller', type: 'movie', thumbnail: '', progress: 65 },
-            { id: 'd3', name: 'Breaking Bad', meta: 'S03E07 • Drama', type: 'series', thumbnail: '', progress: 30 },
-            { id: 'd4', name: 'Al Jazeera', meta: 'News • Arabic', type: 'live', thumbnail: '', isFavourite: true },
-            { id: 'd5', name: 'The Dark Knight Rises — Extended Cut', meta: '2012 • Action', type: 'movie', thumbnail: '', progress: 90, isFavourite: true },
-        ];
+        // Load real watch history from service
+        const entries = WatchHistoryService.getRecent(10);
+        this._recentItems = entries.map(entry => {
+            const progress = PlaybackProgressService.get(entry.getProgressKey());
+            return entry.toRecentCard(progress);
+        });
 
-        try {
-            const raw = localStorage.getItem('iptv_recent');
-            this._recentItems = raw ? JSON.parse(raw) : DUMMY_RECENT;
-        } catch { this._recentItems = DUMMY_RECENT; }
-
+        // Favourites will be handled by a separate FavouritesManager later
         try {
             const raw = localStorage.getItem('iptv_favourites');
             this._favouriteItems = raw ? JSON.parse(raw) : [];
@@ -401,9 +397,11 @@ class HomePage {
 
     setRecentItems(items) {
         this._recentItems = items;
-        try { localStorage.setItem('iptv_recent', JSON.stringify(items)); }
-        catch { /* ignore */ }
         if (!this._showFavourites) this._renderList();
+    }
+
+    refreshRecentItems() {
+        this._loadRecentItems();
     }
 
     setFavouriteItems(items) {
