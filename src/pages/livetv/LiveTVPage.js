@@ -32,6 +32,7 @@ import WatchHistoryService from '../../services/WatchHistoryService.js';
  */
 
 const ALL_CAT_ID = '__all__';
+const LAST_WATCHED_CAT_ID = '__last_watched__';
 const RECENT_CAT_ID = '__recent__';
 const RECENT_DAYS = 7;
 const SEARCH_DELAY = 200;
@@ -67,6 +68,7 @@ class LiveTVPage {
         // Indexes
         this._byCat = new Map();
         this._recentList = [];
+        this._lastWatchedList = [];
         this._nameLC = new Map();
         this._catNameLC = [];
 
@@ -273,6 +275,19 @@ class LiveTVPage {
                 if (ts > cutoff) this._recentList.push(s);
             }
         }
+
+        // Build last-watched list from watch history
+        const liveHistory = WatchHistoryService.getRecent(50)
+            .filter(e => e.contentType === 'live');
+        const streamById = new Map();
+        for (const s of this._allStreams) {
+            streamById.set(String(s.stream_id), s);
+        }
+        this._lastWatchedList = [];
+        for (const entry of liveHistory) {
+            const stream = streamById.get(String(entry.contentId));
+            if (stream) this._lastWatchedList.push(stream);
+        }
     }
 
     /* ═══════════════ RENDER CATEGORIES ═══════════════ */
@@ -284,6 +299,9 @@ class LiveTVPage {
         this._catNameLC = [];
 
         this._addCat(ALL_CAT_ID, 'All Channels', this._allStreams.length);
+        if (this._lastWatchedList.length > 0) {
+            this._addCat(LAST_WATCHED_CAT_ID, '★ Last Watched', this._lastWatchedList.length);
+        }
         this._addCat(RECENT_CAT_ID, '★ Recently Added', this._recentList.length);
 
         for (let i = 0, n = this._cats.length; i < n; i++) {
@@ -418,6 +436,8 @@ class LiveTVPage {
 
         if (catId === ALL_CAT_ID) {
             this._catStreams = this._allStreams;
+        } else if (catId === LAST_WATCHED_CAT_ID) {
+            this._catStreams = this._lastWatchedList;
         } else if (catId === RECENT_CAT_ID) {
             this._catStreams = this._recentList;
         } else {
