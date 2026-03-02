@@ -207,6 +207,14 @@ class VideoPlayer {
         return this._isFullscreen;
     }
 
+    getCurrentTime() {
+        return this._els.video?.currentTime || 0;
+    }
+
+    getDuration() {
+        return this._els.video?.duration || 0;
+    }
+
     _cacheDom() {
         const root = this._container.querySelector('.vplayer');
         this._els = {

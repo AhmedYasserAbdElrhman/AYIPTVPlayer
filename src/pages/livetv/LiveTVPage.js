@@ -6,6 +6,8 @@ import VideoPlayer from '../../components/VideoPlayer/VideoPlayer.js';
 import ImageCache from '../../utils/ImageCache.js';
 import VirtualList from '../../components/VirtualList/VirtualList.js';
 import { EVENTS } from '../../config/AppConstants.js';
+import WatchHistoryEntry from '../../models/WatchHistoryEntry.js';
+import WatchHistoryService from '../../services/WatchHistoryService.js';
 
 /**
  * LiveTV Page — LG WebOS TV
@@ -497,6 +499,17 @@ class LiveTVPage {
             mode: 'mini',
             live: true,
         });
+
+        // Record in watch history
+        const entry = WatchHistoryEntry.fromPlayRequest({
+            url,
+            title: stream.name || 'Live TV',
+            subtitle: 'Live',
+            contentId: String(stream.stream_id || ''),
+            contentType: 'live',
+            thumbnail: stream.stream_icon || '',
+        });
+        WatchHistoryService.add(entry);
     }
 
     _switchChannel(direction) {

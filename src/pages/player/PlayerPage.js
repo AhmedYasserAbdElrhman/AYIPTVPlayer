@@ -1,5 +1,9 @@
 import VideoPlayer from '../../components/VideoPlayer/VideoPlayer.js';
 import SeriesService from '../../api/SeriesService.js';
+import WatchHistoryService from '../../services/WatchHistoryService.js';
+import WatchHistoryEntry from '../../models/WatchHistoryEntry.js';
+import PlaybackProgressService from '../../services/PlaybackProgressService.js';
+import ResumeAlert from '../../components/ResumeAlert/ResumeAlert.js';
 
 /**
  * PlayerPage — standalone fullscreen player page.
@@ -19,11 +23,16 @@ import SeriesService from '../../api/SeriesService.js';
  *       episodes:   [...],
  *       episodeIdx: 0,
  *       season:     '1',
+ *       // Metadata for history tracking:
+ *       contentId:   '123',
+ *       contentType: 'movie',
+ *       thumbnail:   'http://...',
  *   });
  */
 
 // Extensions natively supported by HTML5 <video> / HLS.js
 const SUPPORTED_EXT = new Set(['mp4', 'm3u8', 'ts', 'mkv', 'webm']);
+const PROGRESS_INTERVAL = 10_000; // save progress every 10s
 
 class PlayerPage {
     static PAGE_ID = 'player';
@@ -42,6 +51,12 @@ class PlayerPage {
         this._episodeIdx = 0;
         this._season = null;
         this._seriesName = '';
+
+        // Watch history / progress tracking
+        this._historyEntryId = null;  // series:{id} or movie:{id}
+        this._progressKey = null;     // episode:{...} per-episode, or same as historyEntryId
+        this._progressInterval = null;
+        this._resumeAlert = new ResumeAlert();
     }
 
     // ─── Lifecycle ──────────────────────────────────────────
@@ -49,7 +64,7 @@ class PlayerPage {
     /**
      * Mount the player page and begin playback.
      * @param {HTMLElement} container
-     * @param {{ url: string, title?: string, subtitle?: string, episodes?: Array, episodeIdx?: number, season?: string }} streamInfo
+     * @param {Object} streamInfo
      */
     async mount(container, streamInfo) {
         this._container = container;
@@ -66,6 +81,9 @@ class PlayerPage {
             this._seriesName = streamInfo.title || 'Series';
         }
 
+        // Record in watch history
+        this._recordHistory(streamInfo);
+
         if (streamInfo) {
             this._player.load({
                 url: streamInfo.url,
@@ -81,10 +99,16 @@ class PlayerPage {
         root.addEventListener('player:back', this._backHandler);
         root.addEventListener('player:channel-up', this._channelUpHandler);
         root.addEventListener('player:channel-down', this._channelDownHandler);
+
+        // Non-blocking: show resume alert + start progress tracking
+        this._showResumeAlertIfNeeded();
+        this._startProgressTracking();
     }
 
     destroy() {
         this._isDestroyed = true;
+        this._stopProgressTracking();
+
         if (this._rootEl) {
             this._rootEl.removeEventListener('player:back', this._backHandler);
             this._rootEl.removeEventListener('player:channel-up', this._channelUpHandler);
@@ -97,16 +121,105 @@ class PlayerPage {
         this._episodes = null;
     }
 
+    // ─── Watch History ────────────────────────────────────────
+
+    _recordHistory(streamInfo) {
+        if (!streamInfo?.contentId) return;
+
+        const entry = WatchHistoryEntry.fromPlayRequest(streamInfo);
+        WatchHistoryService.add(entry);
+        this._historyEntryId = entry.id;
+        this._progressKey = entry.getProgressKey();
+    }
+
+    // ─── Resume Alert ─────────────────────────────────────────
+
+    async _showResumeAlertIfNeeded() {
+        if (!this._progressKey) return;
+        // No resume for live content
+        if (this._progressKey.startsWith('live:')) return;
+
+        // Wait for video metadata so seek works
+        await this._waitForDuration();
+        if (this._isDestroyed) return;
+
+        const progress = PlaybackProgressService.get(this._progressKey);
+        if (!progress || progress.currentTime < 10) return;
+
+        const shouldResume = await this._resumeAlert.show(this._rootEl, progress.currentTime);
+        if (this._isDestroyed) return;
+
+        if (shouldResume) {
+            this._seekTo(progress.currentTime);
+        }
+    }
+
+    _waitForDuration(timeout = 5000) {
+        return new Promise((resolve) => {
+            const start = Date.now();
+            const check = () => {
+                if (this._isDestroyed) { resolve(); return; }
+                const d = this._player.getDuration();
+                if (d && isFinite(d)) { resolve(); return; }
+                if (Date.now() - start > timeout) { resolve(); return; }
+                setTimeout(check, 200);
+            };
+            check();
+        });
+    }
+
+    _seekTo(seconds) {
+        const video = this._player._els?.video;
+        if (video) video.currentTime = seconds;
+    }
+
+    // ─── Progress Tracking ────────────────────────────────────
+
+    _startProgressTracking() {
+        if (!this._progressKey) return;
+        if (this._progressKey.startsWith('live:')) return;
+
+        this._progressInterval = setInterval(() => {
+            this._saveCurrentProgress();
+        }, PROGRESS_INTERVAL);
+    }
+
+    _stopProgressTracking() {
+        if (this._progressInterval) {
+            clearInterval(this._progressInterval);
+            this._progressInterval = null;
+        }
+        // Final save on exit
+        this._saveCurrentProgress(true);
+    }
+
+    _saveCurrentProgress(immediate = false) {
+        if (!this._progressKey) return;
+        if (this._progressKey.startsWith('live:')) return;
+
+        const currentTime = this._player.getCurrentTime();
+        const duration = this._player.getDuration();
+        if (!duration || !isFinite(duration) || currentTime <= 0) return;
+
+        if (immediate) {
+            PlaybackProgressService.saveImmediate(this._progressKey, currentTime, duration);
+        } else {
+            PlaybackProgressService.save(this._progressKey, currentTime, duration);
+        }
+    }
+
     // ─── Episode Navigation ───────────────────────────────────
 
     _prevEpisode() {
         if (!this._episodes || this._episodeIdx <= 0) return;
+        this._stopProgressTracking();
         this._episodeIdx--;
         this._loadEpisode(this._episodes[this._episodeIdx]);
     }
 
     _nextEpisode() {
         if (!this._episodes || this._episodeIdx >= this._episodes.length - 1) return;
+        this._stopProgressTracking();
         this._episodeIdx++;
         this._loadEpisode(this._episodes[this._episodeIdx]);
     }
@@ -124,6 +237,21 @@ class PlayerPage {
             mode: 'fullscreen',
             episodes: true,
         });
+
+        // Update history for the new episode
+        this._recordHistory({
+            url,
+            title: this._seriesName,
+            subtitle: 'S' + this._season + ' · ' + epTitle,
+            contentId: String(episode.id),
+            contentType: 'episode',
+            seriesId: this._episodes[0]?.series_id ? String(this._episodes[0].series_id) : '',
+            seriesName: this._seriesName,
+            season: this._season,
+            episodeIdx: this._episodeIdx,
+        });
+
+        this._startProgressTracking();
     }
 
     // ─── Navigation ─────────────────────────────────────────

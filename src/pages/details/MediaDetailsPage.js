@@ -21,6 +21,7 @@ import { EVENTS } from '../../config/AppConstants.js';
 import { mapRemoteEvent } from '../../input/RemoteKeyMapper.js';
 import { RemoteActions } from '../../input/RemoteActions.js';
 import TemplateEngine from '../../utils/templateEngine.js';
+import WatchHistoryService from '../../services/WatchHistoryService.js';
 
 const SUPPORTED_EXT = new Set(['mp4', 'm3u8', 'ts', 'mkv', 'webm']);
 
@@ -45,6 +46,9 @@ class MediaDetailsPage {
         this._seasonIdx = 0;
         this._episodeIdx = 0;
         this._playBtn = null;
+        this._continueBtn = null;
+        this._playSeriesBtn = null;
+        this._resumeEpisodeIdx = null;
 
         // Focus
         this._region = 0;       // 0=back, 1=play/seasons, 2=episodes
@@ -85,6 +89,8 @@ class MediaDetailsPage {
         this._seasonBtns = [];
         this._episodeEls = [];
         this._playBtn = null;
+        this._continueBtn = null;
+        this._playSeriesBtn = null;
         if (this._container) {
             this._container.textContent = '';
         }
@@ -217,6 +223,9 @@ class MediaDetailsPage {
                     url,
                     title: merged.name || item.name || 'Movie',
                     subtitle: merged.year ? String(merged.year) : '',
+                    contentId: String(item.stream_id || item.id),
+                    contentType: 'movie',
+                    thumbnail: item.stream_icon || item.cover || '',
                 },
                 bubbles: true,
             })
@@ -239,13 +248,45 @@ class MediaDetailsPage {
         this._seasonIdx = 0;
         this._episodeIdx = 0;
 
+        // Check watch history for this series
+        const seriesId = String(this._item.series_id || this._item.id);
+        const historyEntry = WatchHistoryService.getById('series:' + seriesId);
+
+        if (historyEntry && historyEntry.season != null) {
+            // Auto-select the last watched season
+            const resumeKey = String(historyEntry.season);
+            const idx = this._seasonKeys.indexOf(resumeKey);
+            if (idx >= 0) {
+                this._activeSeason = resumeKey;
+                this._seasonIdx = idx;
+            }
+            this._resumeEpisodeIdx = historyEntry.episodeIdx;
+        }
+
         if (this._seasonKeys.length > 0) {
+            if (historyEntry) {
+                // Has history — show "Continue" button
+                this._renderContinueButton();
+            } else {
+                // No history — show "Play" button (starts S1E1)
+                this._renderPlayButton();
+            }
+
             this._el.seasons.style.display = 'flex';
             this._el.episodes.style.display = 'flex';
             this._renderSeasonTabs();
             this._renderEpisodes();
 
-            // Focus first season
+            // Auto-select resume episode
+            if (this._resumeEpisodeIdx != null) {
+                const epIdx = Number(this._resumeEpisodeIdx);
+                const epList = episodes[this._activeSeason] || [];
+                if (epIdx >= 0 && epIdx < epList.length) {
+                    this._episodeIdx = epIdx;
+                }
+            }
+
+            // Focus action button or first season
             this._region = 1;
             this._setFocus();
         }
@@ -333,6 +374,50 @@ class MediaDetailsPage {
         this._renderEpisodes();
     }
 
+    _renderPlayButton() {
+        const epList = this._info?.episodes?.[this._activeSeason] || [];
+        if (!epList.length) return;
+
+        this._el.actions.innerHTML =
+            '<button class="details-play" id="details-play-series">' +
+            PLAY_SVG + ' Play' +
+            '</button>';
+
+        this._playSeriesBtn = this._el.actions.querySelector('#details-play-series');
+    }
+
+    _playFirstEpisode() {
+        const epList = this._info?.episodes?.[this._activeSeason] || [];
+        if (epList[0]) {
+            this._episodeIdx = 0;
+            this._playEpisode(epList[0]);
+        }
+    }
+
+    _renderContinueButton() {
+        const epList = this._info?.episodes?.[this._activeSeason] || [];
+        const epIdx = Number(this._resumeEpisodeIdx);
+        const ep = epList[epIdx];
+        if (!ep) return;
+
+        const epTitle = ep.title || ep.name || 'Episode ' + (ep.episode_num || '');
+        this._el.actions.innerHTML =
+            '<button class="details-play details-play--continue" id="details-continue">' +
+            PLAY_SVG + ' Continue · S' + this._activeSeason + ' · ' + _escapeHtml(epTitle) +
+            '</button>';
+
+        this._continueBtn = this._el.actions.querySelector('#details-continue');
+    }
+
+    _playContinue() {
+        const epList = this._info?.episodes?.[this._activeSeason] || [];
+        const epIdx = Number(this._resumeEpisodeIdx);
+        if (epList[epIdx]) {
+            this._episodeIdx = epIdx;
+            this._playEpisode(epList[epIdx]);
+        }
+    }
+
     _playEpisode(episode) {
         const rawExt = episode.container_extension || 'mp4';
         const ext = SUPPORTED_EXT.has(rawExt) ? rawExt : 'mp4';
@@ -350,6 +435,11 @@ class MediaDetailsPage {
                     episodes,
                     episodeIdx: this._episodeIdx,
                     season: this._activeSeason,
+                    contentId: String(episode.id),
+                    contentType: 'episode',
+                    seriesId: String(this._item.series_id || this._item.id),
+                    seriesName,
+                    thumbnail: this._item.cover || '',
                 },
                 bubbles: true,
             })
@@ -359,6 +449,8 @@ class MediaDetailsPage {
     /* ═══════════════ DELEGATED CLICK HANDLERS ═══════════════ */
 
     _onActionClick(e) {
+        if (e.target.closest('#details-continue')) return this._playContinue();
+        if (e.target.closest('#details-play-series')) return this._playFirstEpisode();
         if (e.target.closest('#details-play')) this._playMovie();
     }
 
@@ -410,18 +502,114 @@ class MediaDetailsPage {
 
     /* ═══════════════ NAVIGATION ═══════════════ */
 
+    /** Region indices that adapt based on whether an action button exists */
+    get _hasActionBtn() { return !!(this._continueBtn || this._playSeriesBtn); }
+    get _seasonsRegion() { return this._hasActionBtn ? 2 : 1; }
+    get _episodesRegion() { return this._hasActionBtn ? 3 : 2; }
+
+    _navUp() {
+        const sr = this._seasonsRegion;
+        const er = this._episodesRegion;
+
+        if (this._region === er) {
+            if (this._episodeIdx > 0) {
+                this._episodeIdx--;
+            } else {
+                this._region = sr;
+            }
+        } else if (this._region === sr && this._hasActionBtn) {
+            this._region = 1;
+        } else if (this._region <= 1 && this._region > 0) {
+            this._region = 0;
+        }
+        this._setFocus();
+    }
+
+    _navDown() {
+        const sr = this._seasonsRegion;
+        const er = this._episodesRegion;
+
+        if (this._region === 0) {
+            this._region = 1;
+        } else if (this._region === 1 && this._hasActionBtn) {
+            this._region = sr;
+        } else if (this._region === sr && this._type === 'series' && this._episodeEls.length > 0) {
+            this._region = er;
+            this._episodeIdx = 0;
+        } else if (this._region === er) {
+            if (this._episodeIdx < this._episodeEls.length - 1) {
+                this._episodeIdx++;
+            }
+        }
+        this._setFocus();
+    }
+
+    _navLeft() {
+        const sr = this._seasonsRegion;
+        if (this._region === sr && this._type === 'series') {
+            if (this._seasonIdx > 0) {
+                this._seasonIdx--;
+                this._switchSeason(this._seasonKeys[this._seasonIdx]);
+                this._setFocus();
+            }
+        }
+    }
+
+    _navRight() {
+        const sr = this._seasonsRegion;
+        if (this._region === sr && this._type === 'series') {
+            if (this._seasonIdx < this._seasonKeys.length - 1) {
+                this._seasonIdx++;
+                this._switchSeason(this._seasonKeys[this._seasonIdx]);
+                this._setFocus();
+            }
+        }
+    }
+
+    _navOk() {
+        const er = this._episodesRegion;
+        if (this._region === 0) {
+            this._goBack();
+        } else if (this._region === 1) {
+            if (this._type === 'movie') {
+                this._playMovie();
+            } else if (this._continueBtn) {
+                this._playContinue();
+            } else if (this._playSeriesBtn) {
+                this._playFirstEpisode();
+            }
+        } else if (this._region === er) {
+            const episodes = this._info?.episodes?.[this._activeSeason] || [];
+            if (episodes[this._episodeIdx]) {
+                this._playEpisode(episodes[this._episodeIdx]);
+            }
+        }
+    }
+
     _goBack() {
         window.history.back();
     }
 
     /* ═══════════════ FOCUS MANAGEMENT ═══════════════ */
 
+    /**
+     * Focus regions:
+     *  0 = Back button
+     *  1 = Continue button (series with resume) / Play button (movie) / Season tabs
+     *  2 = Season tabs (when continue button is in region 1) / Episode list
+     *  3 = Episode list (when continue button pushes seasons to region 2)
+     */
     _setFocus() {
         // Clear all focus
         this._el.back.classList.remove('focused');
         if (this._playBtn) this._playBtn.classList.remove('focused');
+        if (this._continueBtn) this._continueBtn.classList.remove('focused');
+        if (this._playSeriesBtn) this._playSeriesBtn.classList.remove('focused');
         for (const btn of this._seasonBtns) btn.classList.remove('focused');
         for (const el of this._episodeEls) el.classList.remove('focused');
+
+        const seasonsRegion = this._continueBtn ? 2 : 1;
+        const episodesRegion = this._continueBtn ? 3 : 2;
 
         switch (this._region) {
             case 0:
@@ -430,12 +618,18 @@ class MediaDetailsPage {
             case 1:
                 if (this._type === 'movie' && this._playBtn) {
                     this._playBtn.classList.add('focused');
+                } else if (this._continueBtn) {
+                    this._continueBtn.classList.add('focused');
+                } else if (this._playSeriesBtn) {
+                    this._playSeriesBtn.classList.add('focused');
                 } else if (this._seasonBtns[this._seasonIdx]) {
                     this._seasonBtns[this._seasonIdx].classList.add('focused');
                 }
                 break;
-            case 2:
-                if (this._episodeEls[this._episodeIdx]) {
+            default:
+                if (this._region === seasonsRegion && this._seasonBtns[this._seasonIdx]) {
+                    this._seasonBtns[this._seasonIdx].classList.add('focused');
+                } else if (this._region === episodesRegion && this._episodeEls[this._episodeIdx]) {
                     this._episodeEls[this._episodeIdx].classList.add('focused');
                     this._ensureEpisodeVisible(this._episodeIdx);
                 }
@@ -463,70 +657,27 @@ class MediaDetailsPage {
 
             case RemoteActions.UP:
                 e.preventDefault();
-                if (this._region === 2) {
-                    if (this._episodeIdx > 0) {
-                        this._episodeIdx--;
-                    } else {
-                        this._region = 1;
-                    }
-                } else if (this._region === 1) {
-                    this._region = 0;
-                }
-                this._setFocus();
+                this._navUp();
                 return;
 
             case RemoteActions.DOWN:
                 e.preventDefault();
-                if (this._region === 0) {
-                    this._region = 1;
-                } else if (this._region === 1 && this._type === 'series' && this._episodeEls.length > 0) {
-                    this._region = 2;
-                    this._episodeIdx = 0;
-                } else if (this._region === 2) {
-                    if (this._episodeIdx < this._episodeEls.length - 1) {
-                        this._episodeIdx++;
-                    }
-                }
-                this._setFocus();
+                this._navDown();
                 return;
 
             case RemoteActions.LEFT:
                 e.preventDefault();
-                if (this._region === 1 && this._type === 'series') {
-                    if (this._seasonIdx > 0) {
-                        this._seasonIdx--;
-                        this._switchSeason(this._seasonKeys[this._seasonIdx]);
-                        this._setFocus();
-                    }
-                }
+                this._navLeft();
                 return;
 
             case RemoteActions.RIGHT:
                 e.preventDefault();
-                if (this._region === 1 && this._type === 'series') {
-                    if (this._seasonIdx < this._seasonKeys.length - 1) {
-                        this._seasonIdx++;
-                        this._switchSeason(this._seasonKeys[this._seasonIdx]);
-                        this._setFocus();
-                    }
-                }
+                this._navRight();
                 return;
 
             case RemoteActions.OK:
                 e.preventDefault();
-                if (this._region === 0) {
-                    this._goBack();
-                } else if (this._region === 1) {
-                    if (this._type === 'movie') {
-                        this._playMovie();
-                    }
-                    // For series, season is already selected via switchSeason
-                } else if (this._region === 2) {
-                    const episodes = this._info?.episodes?.[this._activeSeason] || [];
-                    if (episodes[this._episodeIdx]) {
-                        this._playEpisode(episodes[this._episodeIdx]);
-                    }
-                }
+                this._navOk();
                 return;
         }
     }
