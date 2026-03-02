@@ -5,6 +5,9 @@ import { PAGES, EVENTS } from '../../config/AppConstants.js';
 import RecentCard from '../../components/RecentCard/RecentCard.js';
 import WatchHistoryService from '../../services/WatchHistoryService.js';
 import PlaybackProgressService from '../../services/PlaybackProgressService.js';
+import LiveService from '../../api/LiveService.js';
+import VodService from '../../api/VodService.js';
+import SeriesService from '../../api/SeriesService.js';
 
 /**
  * Home page controller — Smart TV remote optimised.
@@ -65,6 +68,7 @@ class HomePage {
         this._startClock();
         this._populateExpiration();
         this._loadRecentItems();
+        this._loadCounts();
 
         this._setFocus(0, 0);
     }
@@ -296,6 +300,15 @@ class HomePage {
         this._els.liveCount.textContent = `${live} channel${live !== 1 ? 's' : ''}`;
         this._els.moviesCount.textContent = `${movies} movie${movies !== 1 ? 's' : ''}`;
         this._els.seriesCount.textContent = `${series} series`;
+    }
+
+    _loadCounts() {
+        const live = LiveService.getCachedCount();
+        const movies = VodService.getCachedCount();
+        const series = SeriesService.getCachedCount();
+        if (live != null && movies != null && series != null) {
+            this.setCounts(live, movies, series);
+        }
     }
 
     // ─── Recent / Favourites ───────────────────────────────────
