@@ -237,7 +237,14 @@ class App {
         }
 
         if (entry.contentType === 'live') {
-            this._showLiveTV();
+            this._showPlayer({
+                url: entry.url,
+                title: entry.name,
+                subtitle: 'Live',
+                contentId: entry.contentId,
+                contentType: 'live',
+                thumbnail: entry.thumbnail,
+            });
         } else if (entry.contentType === 'episode' && entry.seriesId) {
             // Episode — navigate to series details page so user gets
             // season/episode browser and next/prev in the player.
