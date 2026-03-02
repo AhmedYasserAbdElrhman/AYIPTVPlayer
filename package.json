@@ -13,6 +13,7 @@
         "launch": "ares-launch -d lgtv com.ay.iptv",
         "close": "ares-launch -d lgtv --close com.ay.iptv",
         "inspect": "ares-inspect -d lgtv com.ay.iptv --open",
+        "uninstall:tv": "ares-install -d lgtv -r com.ay.iptv",
         "deploy": "npm run package && npm run install:tv && npm run launch",
         "redeploy": "npm run close && npm run deploy"
     },
