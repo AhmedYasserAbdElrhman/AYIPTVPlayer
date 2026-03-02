@@ -77,6 +77,11 @@ class SeriesService {
     /**
      * Clears the series service cache.
      */
+    getCachedCount() {
+        const data = this._cache.get('series_all');
+        return data ? data.length : null;
+    }
+
     clearCache() {
         this._cache.clear();
     }

@@ -72,6 +72,11 @@ class LiveService {
     /**
      * Clears the live service cache.
      */
+    getCachedCount() {
+        const data = this._cache.get('live_streams_all');
+        return data ? data.length : null;
+    }
+
     clearCache() {
         this._cache.clear();
     }
