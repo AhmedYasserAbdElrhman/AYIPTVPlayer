@@ -1,28 +1,81 @@
-// Your existing code with the specified changes applied here
+import 'package:flutter/material.dart';
 
-// Assuming you have other existing code, just ensure you include everything else unchanged, except the modifications detailed in your request.
-
-function _buildFocusGrid() {
-    // Logic to create 4 rows instead of 3
-    // Row 1 has only toggleFav
-    // Row 2 is empty for recentCards
+class HomePage extends StatefulWidget {
+  @override
+  _HomePageState createState() => _HomePageState();
 }
 
-// Rename _rebuildRow1 to _rebuildRow2
-function _rebuildRow2() {
-    // Logic for rebuilding the second row
-}
+class _HomePageState extends State<HomePage> {
+  List<String> favourites = [];
+  List<String> recentItems = [];
+  bool isLoggedIn = true;
 
-function _setFocus(row) {
-    // Updated scroll logic for row === 2
-    if (row === 2) {
-        // Logic to handle focus for row 2
-    }
-}
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Home'),
+        actions: <Widget>[
+          IconButton(
+            icon: Icon(Icons.settings),
+            onPressed: () {
+              // Navigate to settings
+            },
+          ),
+          IconButton(
+            icon: Icon(Icons.exit_to_app),
+            onPressed: () {
+              // Logout action
+            },
+          ),
+        ],
+      ),
+      body: _buildFocusGrid(),
+    );
+  }
 
-function _renderList() {
-    // Now using _rebuildRow2() for row === 2
-    if (row === 2) {
-        _rebuildRow2();
-    }
+  Widget _buildFocusGrid() {
+    return Column(
+      children: [
+        _rebuildRow1(),
+        _rebuildRow2(),
+        _rebuildRow3(),
+      ],
+    );
+  }
+
+  Widget _rebuildRow1() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: <Widget>[
+        Text('Favourites'),
+        IconButton(
+          icon: Icon(Icons.favorite),
+          onPressed: () {
+            // Toggle favourite items
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _rebuildRow2() {
+    return Column(
+      children: recentItems.map((item) {
+        return ListTile(
+          title: Text(item),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _rebuildRow3() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: <Widget>[
+        Text('Settings'),
+        Text('Logout'),
+      ],
+    );
+  }
 }
