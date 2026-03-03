@@ -50,33 +50,54 @@ class MediaCard {
             ? (item.rating_5based ? `★ ${item.rating_5based}` : `★ ${item.rating}`)
             : '';
 
-        // Build DOM — single innerHTML, then cache references
-        // NOTE: Images use data-src (NOT src) to prevent eager browser fetching.
-        // The IntersectionObserver or ImageCache loads them when visible.
-        card.innerHTML =
-            '<div class="mcard__poster">' +
-            '<div class="mcard__poster-placeholder">' + PLACEHOLDER_SVG + '</div>' +
-            (item.cover || item.stream_icon
-                ? '<img class="mcard__poster-img" data-src="' +
-                _escapeAttr(item.cover || item.stream_icon) +
-                '" alt="" decoding="async">'
-                : '') +
-            '</div>' +
-            '<div class="mcard__info">' +
-            '<span class="mcard__name">' + _escapeHtml(name) + '</span>' +
-            '<div class="mcard__meta">' +
-            (year ? '<span class="mcard__year">' + _escapeHtml(year) + '</span>' : '') +
-            (rating ? '<span class="mcard__rating">' + _escapeHtml(rating) + '</span>' : '') +
-            '</div>' +
-            '</div>';
+        // Poster container
+        const poster = document.createElement('div');
+        poster.className = 'mcard__poster';
 
-        // Handle image error (load is handled by caller's ImageCache/Observer)
-        const img = card.querySelector('.mcard__poster-img');
-        if (img) {
+        const placeholder = document.createElement('div');
+        placeholder.className = 'mcard__poster-placeholder';
+        placeholder.innerHTML = PLACEHOLDER_SVG;
+        poster.appendChild(placeholder);
+
+        const coverUrl = item.cover || item.stream_icon;
+        if (coverUrl) {
+            const img = document.createElement('img');
+            img.className = 'mcard__poster-img';
+            img.dataset.src = coverUrl;  // NOT img.src — lazy loaded by observer
+            img.alt = '';
+            img.decoding = 'async';
             img.addEventListener('error', () => {
                 img.style.display = 'none';
             }, { once: true });
+            poster.appendChild(img);
         }
+        card.appendChild(poster);
+
+        // Info container
+        const info = document.createElement('div');
+        info.className = 'mcard__info';
+
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'mcard__name';
+        nameSpan.textContent = name;
+        info.appendChild(nameSpan);
+
+        const meta = document.createElement('div');
+        meta.className = 'mcard__meta';
+        if (year) {
+            const yearSpan = document.createElement('span');
+            yearSpan.className = 'mcard__year';
+            yearSpan.textContent = year;
+            meta.appendChild(yearSpan);
+        }
+        if (rating) {
+            const ratingSpan = document.createElement('span');
+            ratingSpan.className = 'mcard__rating';
+            ratingSpan.textContent = rating;
+            meta.appendChild(ratingSpan);
+        }
+        info.appendChild(meta);
+        card.appendChild(info);
 
         return new MediaCard(card, item);
     }
