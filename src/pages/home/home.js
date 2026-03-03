@@ -1,22 +1,81 @@
-// Updating the focus grid structure in home.js to separate the Favourites toggle and recent items into different rows.
+import 'package:flutter/material.dart';
 
-import React from 'react';
-import { View, Text } from 'react-native';
-import FavouritesToggle from './FavouritesToggle';
-import RecentItems from './RecentItems';
+class HomePage extends StatefulWidget {
+  @override
+  _HomePageState createState() => _HomePageState();
+}
 
-const Home = () => {
-    return (
-        <View>
-            {/* Favourites Toggle Button in its own row */}
-            <View style={{ marginBottom: 20 }}>
-                <FavouritesToggle />
-            </View>
+class _HomePageState extends State<HomePage> {
+  List<String> favourites = [];
+  List<String> recentItems = [];
+  bool isLoggedIn = true;
 
-            {/* Recent Items in its own row */}
-            <RecentItems />
-        </View>
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Home'),
+        actions: <Widget>[
+          IconButton(
+            icon: Icon(Icons.settings),
+            onPressed: () {
+              // Navigate to settings
+            },
+          ),
+          IconButton(
+            icon: Icon(Icons.exit_to_app),
+            onPressed: () {
+              // Logout action
+            },
+          ),
+        ],
+      ),
+      body: _buildFocusGrid(),
     );
-};
+  }
 
-export default Home;
+  Widget _buildFocusGrid() {
+    return Column(
+      children: [
+        _rebuildRow1(),
+        _rebuildRow2(),
+        _rebuildRow3(),
+      ],
+    );
+  }
+
+  Widget _rebuildRow1() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: <Widget>[
+        Text('Favourites'),
+        IconButton(
+          icon: Icon(Icons.favorite),
+          onPressed: () {
+            // Toggle favourite items
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _rebuildRow2() {
+    return Column(
+      children: recentItems.map((item) {
+        return ListTile(
+          title: Text(item),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _rebuildRow3() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: <Widget>[
+        Text('Settings'),
+        Text('Logout'),
+      ],
+    );
+  }
+}
