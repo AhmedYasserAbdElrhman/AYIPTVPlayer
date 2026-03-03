@@ -170,6 +170,14 @@ class MoviesPage {
             this._els.search.addEventListener('focus', () => { this._inputActive = true; this._region = 1; });
             this._els.search.addEventListener('blur', () => { this._inputActive = false; });
         }
+
+        // Event delegation for category clicks (avoids 100+ individual listeners)
+        this._els.categoryList.addEventListener('click', (e) => {
+            const btn = e.target.closest('.cat-item');
+            if (!btn) return;
+            const idx = this._visCatEls.indexOf(btn);
+            if (idx >= 0) { this._setFocus(2, idx); this._selectCategory(btn.dataset.catId); }
+        });
     }
 
     /* ═══════════════ DATA ═══════════════ */
@@ -253,11 +261,6 @@ class MoviesPage {
 
         el.appendChild(ns);
         el.appendChild(cs);
-
-        el.addEventListener('click', () => {
-            const idx = this._visCatEls.indexOf(el);
-            if (idx >= 0) { this._setFocus(2, idx); this._selectCategory(String(id)); }
-        });
 
         this._els.categoryList.appendChild(el);
         this._catEls.push(el);
@@ -542,7 +545,7 @@ class MoviesPage {
 
     _startClock() {
         this._updateClock();
-        this._clockTimer = setInterval(() => this._updateClock(), 30000);
+        this._clockTimer = setInterval(() => this._updateClock(), 60000);
     }
     _updateClock() {
         this._els.time.textContent = new Date().toLocaleTimeString('en-US', {
