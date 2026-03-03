@@ -96,8 +96,8 @@ class HomePage {
             liveCount: this._container.querySelector('#card-livetv-count'),
             moviesCount: this._container.querySelector('#card-movies-count'),
             seriesCount: this._container.querySelector('#card-series-count'),
-            toggleFav: this._container.querySelector('#toggle-fav'),
-            recentTitle: this._container.querySelector('#recent-title'),
+            favouritesList: this._container.querySelector('#favourites-list'),
+            favouritesEmpty: this._container.querySelector('#favourites-empty'),
             recentList: this._container.querySelector('#recent-list'),
             recentEmpty: this._container.querySelector('#recent-empty'),
             btnSettings: this._container.querySelector('#btn-settings'),
@@ -113,13 +113,18 @@ class HomePage {
     _buildFocusGrid() {
         this._rows = [
             [this._els.cardLive, this._els.cardMovies, this._els.cardSeries],
-            [this._els.toggleFav],
+            [], // Row 1: Favourites
+            [], // Row 2: Recent
             [this._els.btnSettings, this._els.btnLogout],
         ];
     }
 
     _rebuildRow1() {
-        this._rows[1] = [this._els.toggleFav, ...this._recentCards];
+        this._rows[1] = this._favouriteCards || [];
+    }
+
+    _rebuildRow2() {
+        this._rows[2] = this._recentCards || [];
     }
 
     // ─── Events ────────────────────────────────────────────────
@@ -132,7 +137,6 @@ class HomePage {
         this._els.cardSeries.addEventListener('click', () => this._navigate('series'));
         this._els.btnSettings.addEventListener('click', () => this._navigate('settings'));
         this._els.btnLogout.addEventListener('click', () => this._handleLogout());
-        this._els.toggleFav.addEventListener('click', () => this._toggleFavourites());
     }
 
     // ─── Key Handling ──────────────────────────────────────────
@@ -213,8 +217,8 @@ class HomePage {
         this._focusRow = row;
         this._focusCol = col;
 
-        // Instant scroll for horizontal recent list only
-        if (row === 1 && col > 0) {
+        // Instant scroll for horizontal lists only
+        if ((row === 1 || row === 2) && col >= 0) {
             target.scrollIntoView({ block: 'nearest', inline: 'nearest' });
         }
     }
@@ -226,7 +230,6 @@ class HomePage {
         if (focused === this._els.cardLive) return this._navigate('livetv');
         if (focused === this._els.cardMovies) return this._navigate('movies');
         if (focused === this._els.cardSeries) return this._navigate('series');
-        if (focused === this._els.toggleFav) return this._toggleFavourites();
         if (focused === this._els.btnSettings) return this._navigate('settings');
         if (focused === this._els.btnLogout) return this._handleLogout();
 
@@ -327,50 +330,58 @@ class HomePage {
             this._favouriteItems = raw ? JSON.parse(raw) : [];
         } catch { this._favouriteItems = []; }
 
-        this._renderList();
+        this._renderFavourites();
+        this._renderRecentItems();
     }
 
-    _toggleFavourites() {
-        this._showFavourites = !this._showFavourites;
-        const toggle = this._els.toggleFav;
-        const isActive = toggle.classList.toggle('toggle--active');
-        toggle.setAttribute('aria-checked', isActive.toString());
+    _renderFavourites() {
+        const items = this._favouriteItems;
+        const list = this._els.favouritesList;
 
-        this._els.recentTitle.textContent = this._showFavourites
-            ? 'Favourites'
-            : 'Latest Watched';
+        if (this._favouriteCards) {
+            this._favouriteCards.forEach(c => c.remove());
+        }
+        this._favouriteCards = [];
 
-        this._renderList();
+        if (items.length === 0) {
+            this._els.favouritesEmpty.style.display = 'flex';
+        } else {
+            this._els.favouritesEmpty.style.display = 'none';
+            items.forEach((item) => {
+                const card = this._createRecentCard(item);
+                list.appendChild(card);
+                this._favouriteCards.push(card);
+            });
+        }
+        this._rebuildRow1();
     }
 
-    _renderList() {
-        const items = this._showFavourites ? this._favouriteItems : this._recentItems;
+    _renderRecentItems() {
+        const items = this._recentItems;
         const list = this._els.recentList;
 
-        // Clear old cards
-        this._recentCards.forEach((card) => card.remove());
+        if (this._recentCards) {
+            this._recentCards.forEach(c => c.remove());
+        }
         this._recentCards = [];
 
         if (items.length === 0) {
             this._els.recentEmpty.style.display = 'flex';
-            this._rebuildRow1();
-            return;
+        } else {
+            this._els.recentEmpty.style.display = 'none';
+            items.forEach((item) => {
+                const card = this._createRecentCard(item);
+                list.appendChild(card);
+                this._recentCards.push(card);
+            });
         }
+        this._rebuildRow2();
+    }
 
-        this._els.recentEmpty.style.display = 'none';
-
-        items.forEach((item) => {
-            const card = this._createRecentCard(item);
-            list.appendChild(card);
-            this._recentCards.push(card);
-        });
-
-        this._rebuildRow1();
-
-        // Clamp focus if needed
-        if (this._focusRow === 1 && this._focusCol >= this._rows[1].length) {
-            this._focusCol = this._rows[1].length - 1;
-        }
+    _renderList() {
+        // Obsolete, keeping as dummy if called anywhere else
+        this._renderFavourites();
+        this._renderRecentItems();
     }
 
     _createRecentCard(item) {
@@ -410,7 +421,7 @@ class HomePage {
 
     setRecentItems(items) {
         this._recentItems = items;
-        if (!this._showFavourites) this._renderList();
+        this._renderRecentItems();
     }
 
     refreshRecentItems() {
@@ -421,7 +432,7 @@ class HomePage {
         this._favouriteItems = items;
         try { localStorage.setItem('iptv_favourites', JSON.stringify(items)); }
         catch { /* ignore */ }
-        if (this._showFavourites) this._renderList();
+        this._renderFavourites();
     }
 
 

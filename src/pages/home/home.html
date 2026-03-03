@@ -108,20 +108,29 @@
                 </button>
             </div>
 
-            <!-- Recent / Favourites Section -->
-            <div class="home-recent">
-                <div class="home-recent__header">
-                    <h2 class="home-recent__title" id="recent-title">Latest Watched</h2>
-                    <div class="home-recent__toggle-wrap">
-                        <span class="home-recent__toggle-label">Favourites</span>
-                        <div class="toggle focusable" id="toggle-fav" data-focus-index="3" data-focus-row="1"
-                            role="switch" aria-checked="false">
-                            <div class="toggle__knob"></div>
-                        </div>
+            <!-- Favourites Section -->
+            <div class="home-row home-row--favourites" id="row-favourites">
+                <div class="home-row__header">
+                    <h2 class="home-row__title">Favourites</h2>
+                </div>
+                <div class="home-row__list" id="favourites-list">
+                    <div class="home-row__empty" id="favourites-empty">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                        </svg>
+                        <span>No favourite items yet</span>
                     </div>
                 </div>
-                <div class="home-recent__list" id="recent-list">
-                    <div class="home-recent__empty" id="recent-empty">
+            </div>
+
+            <!-- Latest Watched Section -->
+            <div class="home-row home-row--recent" id="row-recent">
+                <div class="home-row__header">
+                    <h2 class="home-row__title">Latest Watched</h2>
+                </div>
+                <div class="home-row__list" id="recent-list">
+                    <div class="home-row__empty" id="recent-empty">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
                             stroke-linecap="round" stroke-linejoin="round">
                             <circle cx="12" cy="12" r="10" />
