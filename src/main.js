@@ -25,6 +25,7 @@ import templates from 'virtual:templates';
 import WebOSBackHandler from './utils/WebOSBackHandler.js';
 import { PAGES, EVENTS, SELECTORS } from './config/AppConstants.js';
 import WatchHistoryService from './services/WatchHistoryService.js';
+import ImageCache from './utils/ImageCache.js';
 
 class App {
     constructor() {
@@ -51,6 +52,14 @@ class App {
         WebOSBackHandler.install();
 
         this._bindGlobalEvents();
+
+        // Pause video when app goes to background (webOS Home button)
+        // Prevents webOS from killing the app for excessive background resource usage
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden && this._currentPage?._player) {
+                this._currentPage._player.pause();
+            }
+        });
 
         // SplashPage owns the startup sequence: auth + preload.
         // It returns the session if successful, null if unauthenticated.
@@ -276,6 +285,8 @@ class App {
             this._currentPage.destroy();
         }
         this._currentPage = null;
+        // Flush pending image queue from old page
+        ImageCache.clear();
     }
 }
 

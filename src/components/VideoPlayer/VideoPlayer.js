@@ -33,7 +33,18 @@ const LOADING_DEBOUNCE = 300; // ms before showing spinner
 const HLS_CONFIG = {
     enableWorker: true,
     lowLatencyMode: false,
-    backBufferLength: 90,
+    backBufferLength: 30,
+    maxBufferLength: 30,
+    maxMaxBufferLength: 60,
+    maxBufferSize: 30 * 1000 * 1000,       // 30MB — prevent OOM on 1.5GB TV RAM
+    maxBufferHole: 0.5,
+    startLevel: -1,                         // auto ABR from start
+    abrEwmaDefaultEstimate: 500000,         // conservative 500kbps initial estimate
+    testBandwidth: true,
+    progressive: false,                     // NEVER use progressive on webOS
+    fragLoadingMaxRetry: 4,
+    levelLoadingMaxRetry: 4,
+    manifestLoadingMaxRetry: 3,
 };
 
 class VideoPlayer {
@@ -62,6 +73,9 @@ class VideoPlayer {
         // Focus: row 0 = progress bar, row 1 = controls buttons
         this._focusRow = 1;  // default: controls row
         this._focusCol = 1;  // default: play button (middle)
+
+        // Throttle: only update time text once per second
+        this._lastTimeSec = -1;
 
         // Bind event callbacks once to avoid GC churn
         this._onPlay = () => this._syncPlayState(true);
@@ -551,7 +565,9 @@ class VideoPlayer {
         if (icon) icon.textContent = playing ? '❚❚' : '▶';
 
         if (playing) {
-            this._startProgressLoop();
+            // Progress rAF loop only runs when overlay is visible
+            const overlayVisible = this._els.overlay.classList.contains('vplayer__overlay--visible');
+            if (overlayVisible) this._startProgressLoop();
             this._els.errorWrap.classList.remove('vplayer__error--active');
             this._showLoading(false);
         } else {
@@ -625,7 +641,13 @@ class VideoPlayer {
 
         const pct = (v.currentTime / v.duration) * 100;
         this._els.progressFill.style.width = pct + '%';
-        this._els.timeCurrent.textContent = this._formatTime(v.currentTime);
+
+        // Throttle text updates to once/sec — no visual difference, saves allocations
+        const sec = Math.floor(v.currentTime);
+        if (sec !== this._lastTimeSec) {
+            this._lastTimeSec = sec;
+            this._els.timeCurrent.textContent = this._formatTime(v.currentTime);
+        }
     }
 
     _onMetadataReady() {
@@ -650,11 +672,13 @@ class VideoPlayer {
 
     _showOverlay() {
         this._els.overlay.classList.add('vplayer__overlay--visible');
+        if (this._isPlaying) this._startProgressLoop();
         clearTimeout(this._overlayTimer);
 
         if (this._isPlaying) {
             this._overlayTimer = setTimeout(() => {
                 this._els.overlay.classList.remove('vplayer__overlay--visible');
+                this._stopProgressLoop();
             }, OVERLAY_TIMEOUT);
         }
     }

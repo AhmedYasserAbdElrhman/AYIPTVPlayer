@@ -11,7 +11,7 @@
  *   ImageCache.load(url, imgElement);
  */
 
-const MAX_CACHE_SIZE = 200;
+const MAX_CACHE_SIZE = 400;
 const MAX_CONCURRENT = 4;   // max parallel fetches
 
 class _ImageCache {
@@ -47,15 +47,37 @@ class _ImageCache {
         this._drain();
     }
 
-    /** Process queued items up to concurrency limit */
+    /**
+     * Cancel pending loads for an image element (e.g. when it scrolls out of view).
+     * @param {HTMLImageElement} img
+     */
+    cancel(img) {
+        this._queue = this._queue.filter(entry => entry.img !== img);
+    }
+
+    /**
+     * Process queued items up to concurrency limit.
+     * Uses LIFO (pop) so the MOST RECENTLY requested images
+     * (the ones currently on screen) load first.
+     */
     _drain() {
         while (this._activeCount < MAX_CONCURRENT && this._queue.length > 0) {
-            const { url, img } = this._queue.shift();
+            const { url, img } = this._queue.pop();  // LIFO — newest first
+
+            // Skip images whose DOM nodes were removed by VirtualList scroll
+            if (!img.isConnected) continue;
+
             this._processOne(url, img);
         }
     }
 
     async _processOne(url, img) {
+        // Skip if element was removed from DOM while waiting
+        if (!img.isConnected) {
+            this._drain();
+            return;
+        }
+
         // Check cache again (might have been cached while queued)
         if (this._cache.has(url)) {
             this._promote(url);
@@ -69,10 +91,12 @@ class _ImageCache {
         if (this._inflight.has(url)) {
             try {
                 const objectUrl = await this._inflight.get(url);
-                img.src = objectUrl;
-                img.classList.add('mcard__poster-img--loaded');
+                if (img.isConnected) {
+                    img.src = objectUrl;
+                    img.classList.add('mcard__poster-img--loaded');
+                }
             } catch (_) {
-                img.style.display = 'none';
+                if (img.isConnected) img.style.display = 'none';
             }
             // Don't decrement activeCount — the original fetch owns the slot
             this._drain();
@@ -87,10 +111,13 @@ class _ImageCache {
 
         try {
             const objectUrl = await promise;
-            img.src = objectUrl;
-            img.classList.add('mcard__poster-img--loaded');
+            // Only apply if element is still in the DOM
+            if (img.isConnected) {
+                img.src = objectUrl;
+                img.classList.add('mcard__poster-img--loaded');
+            }
         } catch (_) {
-            img.style.display = 'none';
+            if (img.isConnected) img.style.display = 'none';
         } finally {
             this._inflight.delete(url);
             this._activeCount--;

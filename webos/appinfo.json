@@ -14,5 +14,7 @@
     "disableBackHistoryAPI": false,
     "handlesRelaunch": false,
     "allowAudioCapture": false,
-    "allowVideoCapture": false
+    "allowVideoCapture": false,
+    "transparent": false,
+    "enableKeyboardResizing": false
 }

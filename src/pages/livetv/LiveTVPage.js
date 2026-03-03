@@ -211,6 +211,17 @@ class LiveTVPage {
         this._el.chSearch.addEventListener('focus', () => { this._inputActive = true; this._region = 3; });
         this._el.catSearch.addEventListener('blur', () => { this._inputActive = false; });
         this._el.chSearch.addEventListener('blur', () => { this._inputActive = false; });
+
+        // Event delegation for category clicks (avoids 100+ individual listeners)
+        this._el.catList.addEventListener('click', (e) => {
+            const btn = e.target.closest('.cat-item');
+            if (!btn) return;
+            const idx = this._visCatEls.indexOf(btn);
+            if (idx >= 0) {
+                this._focusTo(2, idx);
+                this._pickCat(btn.dataset.cid);
+            }
+        });
     }
 
     /* ═══════════════ DATA ═══════════════ */
@@ -329,14 +340,6 @@ class LiveTVPage {
 
         el.appendChild(ns);
         el.appendChild(cs);
-
-        el.addEventListener('click', () => {
-            const idx = this._visCatEls.indexOf(el);
-            if (idx >= 0) {
-                this._focusTo(2, idx);
-                this._pickCat(String(id));
-            }
-        });
 
         this._el.catList.appendChild(el);
         this._catEls.push(el);
