@@ -42,21 +42,21 @@ class VirtualList {
      * @param {number}      [opts.buffer=2]  - Extra rows to render above/below viewport
      */
     constructor(opts) {
-        this._container   = opts.container;
-        this._itemHeight  = opts.itemHeight;
-        this._columns     = opts.columns;
-        this._items       = opts.items || [];
-        this._renderItem  = opts.renderItem;
-        this._buffer      = opts.buffer ?? 2;
+        this._container = opts.container;
+        this._itemHeight = opts.itemHeight;
+        this._columns = opts.columns;
+        this._items = opts.items || [];
+        this._renderItem = opts.renderItem;
+        this._buffer = opts.buffer ?? 2;
 
-        this._totalRows   = 0;
+        this._totalRows = 0;
         this._visibleStart = -1;
-        this._visibleEnd   = -1;
-        this._nodeMap      = new Map(); // rowIndex → DOM element
-        this._viewport     = null;
-        this._spacer       = null;
+        this._visibleEnd = -1;
+        this._nodeMap = new Map(); // rowIndex → DOM element
+        this._viewport = null;
+        this._spacer = null;
         this._scrollHandler = this._onScroll.bind(this);
-        this._idleId       = null;
+        this._idleId = null;
 
         this._setup();
         this._calcRows();
@@ -224,7 +224,9 @@ class VirtualList {
         const rowEl = document.createElement('div');
         rowEl.className = 'vlist__row';
         rowEl.style.position = 'absolute';
-        rowEl.style.top = (rowIndex * this._itemHeight) + 'px';
+        rowEl.style.top = '0';
+        rowEl.style.transform = 'translateY(' + (rowIndex * this._itemHeight) + 'px)';
+        rowEl.style.willChange = 'transform';
         rowEl.style.left = '0';
         rowEl.style.right = '0';
         rowEl.style.display = 'flex';
